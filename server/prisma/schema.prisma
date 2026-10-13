@@ -1,0 +1,124 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Category {
+  id        Int        @id @default(autoincrement())
+  name      String
+  slug      String     @unique
+  parentId  Int?
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryHierarchy")
+  products  Product[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model Product {
+  id          Int        @id @default(autoincrement())
+  name        String
+  slug        String     @unique
+  description String
+  price       Float
+  image       String
+  categoryId  Int
+  category    Category   @relation(fields: [categoryId], references: [id])
+  rating      Float      @default(0.0)
+  reviewCount Int        @default(0)
+  stock       Int        @default(0)
+  specs       String     // JSON string
+  features    String     // JSON string array for comparison
+  cartItems   CartItem[]
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model CartSession {
+  id           String        @id @default(uuid())
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  items        CartItem[]
+  discountCode String?
+  discountId   Int?
+  discount     DiscountCode? @relation(fields: [discountId], references: [id])
+}
+
+model CartItem {
+  id        Int         @id @default(autoincrement())
+  sessionId String
+  session   CartSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product     @relation(fields: [productId], references: [id])
+  quantity  Int         @default(1)
+  addedAt   DateTime    @default(now())
+}
+
+model DiscountCode {
+  id          Int           @id @default(autoincrement())
+  code        String        @unique
+  type        String        // "percentage" | "fixed"
+  value       Float
+  minPurchase Float         @default(0.0)
+  isActive    Boolean       @default(true)
+  cartSessions CartSession[]
+  orders       Order[]
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Order {
+  id             Int           @id @default(autoincrement())
+  sessionId      String
+  totalAmount    Float
+  discountAmount Float         @default(0.0)
+  discountId     Int?
+  discount       DiscountCode? @relation(fields: [discountId], references: [id])
+  shippingData   String        // JSON string
+  paymentMethod  String
+  status         String        @default("completed")
+  createdAt      DateTime      @default(now())
+}
+
+model TestSession {
+  id            String             @id @default(uuid())
+  participantId String
+  scenarioId    String
+  startedAt     DateTime           @default(now())
+  endedAt       DateTime?
+  completed     Boolean            @default(false)
+  userAgent     String?
+  screenSize    String?
+  events        InteractionEvent[]
+  taskProgress  TaskProgress[]
+}
+
+model InteractionEvent {
+  id          Int         @id @default(autoincrement())
+  sessionId   String
+  session     TestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  timestamp   DateTime    @default(now())
+  eventType   String
+  target      String?
+  page        String
+  details     String?     // JSON string
+  sequenceNum Int         @default(0)
+}
+
+model TaskProgress {
+  id          Int         @id @default(autoincrement())
+  sessionId   String
+  session     TestSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  taskId      String
+  status      String      @default("in_progress") // "not_started" | "in_progress" | "completed" | "abandoned"
+  startedAt   DateTime    @default(now())
+  completedAt DateTime?
+  stepLog     String?     // JSON string
+}
