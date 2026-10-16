@@ -6,7 +6,10 @@ import {
   Order,
   InteractionEvent,
   TestSession,
-  ProductFilters
+  ProductFilters,
+  User,
+  AuthResponse,
+  DemoAccount
 } from '../types';
 
 const API_BASE_URL = '/api';
@@ -505,5 +508,63 @@ export const api = {
     } catch {
       return true;
     }
+  },
+
+  // Auth Endpoints
+  async login(credentials: { email?: string; password?: string; role?: string }): Promise<AuthResponse> {
+    const res = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials)
+    });
+    return await handleResponse<AuthResponse>(res, null as any);
+  },
+
+  async register(data: { name: string; email: string; password: string; role?: string }): Promise<AuthResponse> {
+    const res = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return await handleResponse<AuthResponse>(res, null as any);
+  },
+
+  async getMe(token: string): Promise<User> {
+    const res = await fetch(`${API_BASE_URL}/auth/me`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    return await handleResponse<User>(res, null as any);
+  },
+
+  async getDemoUsers(): Promise<DemoAccount[]> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/demo-users`);
+      if (res.ok) {
+        return await handleResponse<DemoAccount[]>(res, []);
+      }
+    } catch {
+      // fallback
+    }
+    return [
+      {
+        role: 'user',
+        name: 'Jane Doe',
+        email: 'user@shopsim.test',
+        password: 'user123',
+        description: 'Standard Shopper / Study Participant',
+        badge: 'Shopper'
+      },
+      {
+        role: 'admin',
+        name: 'Dr. Sarah Chen',
+        email: 'admin@shopsim.test',
+        password: 'admin123',
+        description: 'Usability Researcher & System Admin',
+        badge: 'Administrator'
+      }
+    ];
   }
 };
+

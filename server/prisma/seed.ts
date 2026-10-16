@@ -4,6 +4,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('Clearing existing database records...');
+  await prisma.user.deleteMany();
   await prisma.interactionEvent.deleteMany();
   await prisma.taskProgress.deleteMany();
   await prisma.testSession.deleteMany();
@@ -1086,7 +1087,34 @@ async function main() {
     });
   }
 
-  console.log(`Seeding finished. Inserted ${productsData.length} products successfully.`);
+  console.log('Seeding default users and administrators...');
+  await prisma.user.createMany({
+    data: [
+      {
+        email: 'admin@shopsim.test',
+        password: 'admin123',
+        name: 'Dr. Sarah Chen',
+        role: 'admin',
+        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=face',
+      },
+      {
+        email: 'user@shopsim.test',
+        password: 'user123',
+        name: 'Jane Doe',
+        role: 'user',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&h=120&fit=crop&crop=face',
+      },
+      {
+        email: 'shopper@shopsim.test',
+        password: 'password123',
+        name: 'Alex Smith',
+        role: 'user',
+        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=face',
+      },
+    ],
+  });
+
+  console.log(`Seeding finished. Inserted ${productsData.length} products and default users successfully.`);
 }
 
 main()

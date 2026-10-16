@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShippingData } from '../../types';
 import { tracker } from '../../lib/tracker';
-import { ArrowRight, AlertCircle } from 'lucide-react';
+import { ArrowRight, AlertCircle, Sparkles } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
 
 interface ShippingFormProps {
   initialValues: ShippingData;
@@ -12,9 +13,25 @@ export const ShippingForm: React.FC<ShippingFormProps> = ({
   initialValues,
   onSubmit
 }) => {
+  const user = useAuthStore((state) => state.user);
   const [formData, setFormData] = useState<ShippingData>(initialValues);
   const [errors, setErrors] = useState<Partial<Record<keyof ShippingData, string>>>({});
   const [touched, setTouched] = useState<Partial<Record<keyof ShippingData, boolean>>>({});
+
+  // Auto-fill from signed-in user profile
+  useEffect(() => {
+    if (user) {
+      const nameParts = (user.name || '').trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      setFormData(prev => ({
+        ...prev,
+        firstName: prev.firstName || firstName,
+        lastName: prev.lastName || lastName,
+        email: prev.email || user.email || ''
+      }));
+    }
+  }, [user]);
 
   const validateField = (field: keyof ShippingData, val: string): string | null => {
     if (field === 'address2') return null; // optional

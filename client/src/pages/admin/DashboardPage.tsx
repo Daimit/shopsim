@@ -10,8 +10,11 @@ import {
   Activity,
   ArrowRight,
   ShieldCheck,
-  RefreshCw
+  RefreshCw,
+  Shield,
+  LogIn
 } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
 
 export const DashboardPage: React.FC = () => {
   const [sessions, setSessions] = useState<TestSession[]>([]);
@@ -44,8 +47,54 @@ export const DashboardPage: React.FC = () => {
     return `${mins} min`;
   };
 
+  const { user, demoLogin } = useAuthStore();
+
   return (
     <div className="space-y-8 pb-20">
+      {/* Auth Status Notification */}
+      {user?.role === 'admin' ? (
+        <div className="p-3.5 rounded-xl bg-purple-50/70 border border-purple-200 text-purple-900 text-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-purple-600 shrink-0" />
+            <span>
+              Authenticated as Administrator: <strong className="font-bold">{user.name}</strong> ({user.email})
+            </span>
+          </div>
+          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-purple-200 text-purple-800">
+            Full Privileges
+          </span>
+        </div>
+      ) : (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <Shield className="w-5 h-5 text-amber-600 shrink-0" />
+            <div>
+              <span className="font-bold text-amber-900">Administrator Login Recommended: </span>
+              {user ? (
+                <span>You are currently signed in as a Shopper ({user.name}). Usability admin features are optimized for the Researcher persona.</span>
+              ) : (
+                <span>You are currently browsing as a Guest. Log in as an Administrator for researcher credentials and full controls.</span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => demoLogin('admin')}
+              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs rounded-lg transition-colors cursor-pointer"
+            >
+              1-Click Admin Login
+            </button>
+            <Link
+              to="/login?role=admin&redirect=/admin"
+              className="px-3 py-1.5 bg-white hover:bg-amber-100 text-amber-900 font-semibold text-xs rounded-lg border border-amber-300 transition-colors"
+            >
+              Go to Login Page
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>

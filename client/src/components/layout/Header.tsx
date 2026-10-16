@@ -6,10 +6,15 @@ import {
   Search,
   ChevronDown,
   Activity,
-  Layers
+  Layers,
+  LogIn,
+  LogOut,
+  Shield,
+  User as UserIcon
 } from 'lucide-react';
 import { useCartStore } from '../../store/cartStore';
 import { useCompareStore } from '../../store/compareStore';
+import { useAuthStore } from '../../store/authStore';
 import { api } from '../../lib/api';
 import { Category } from '../../types';
 import { tracker } from '../../lib/tracker';
@@ -18,11 +23,14 @@ export const Header: React.FC = () => {
   const navigate = useNavigate();
   const { cart, fetchCart } = useCartStore();
   const compareItems = useCompareStore((state) => state.items);
+  const { user, logout, demoLogin } = useAuthStore();
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [isCatOpen, setIsCatOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchCart();
@@ -31,11 +39,14 @@ export const Header: React.FC = () => {
     }).catch(() => {});
   }, [fetchCart]);
 
-  // Close categories dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setIsCatOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -166,17 +177,162 @@ export const Header: React.FC = () => {
             </form>
           </div>
 
-          {/* Right Action Icons: Admin, Cart */}
-          <div className="flex items-center gap-3">
+          {/* Right Action Icons: Admin Shortcut, Auth Profile / Login Button, Cart */}
+          <div className="flex items-center gap-2.5">
+            {/* Admin Usability Dashboard Shortcut */}
             <Link
               to="/admin"
-              className="hidden sm:flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-blue-600 hover:bg-slate-50 px-2.5 py-1.5 rounded-md border border-slate-200 transition-colors"
+              className={`hidden sm:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors ${
+                user?.role === 'admin'
+                  ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
+                  : 'text-slate-600 hover:text-blue-600 hover:bg-slate-50 border-slate-200'
+              }`}
               title="Admin Usability Dashboard"
               data-track="nav_admin_dashboard"
             >
-              <Activity className="w-3.5 h-3.5 text-blue-500" />
-              <span>Admin</span>
+              <Activity className={`w-3.5 h-3.5 ${user?.role === 'admin' ? 'text-purple-600' : 'text-blue-500'}`} />
+              <span>Dashboard</span>
             </Link>
+
+            {/* Auth Component: Sign In Button or User/Admin Pill */}
+            {!user ? (
+              <Link
+                to="/login"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 hover:text-blue-600 hover:bg-blue-50/50 border border-slate-200 hover:border-blue-200 transition-all cursor-pointer"
+                data-track="nav_signin_button"
+              >
+                <LogIn className="w-3.5 h-3.5 text-blue-600" />
+                <span>Sign In</span>
+              </Link>
+            ) : (
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer ${
+                    user.role === 'admin'
+                      ? 'bg-purple-50/80 border-purple-200 text-purple-800 hover:bg-purple-100/80'
+                      : 'bg-slate-100/80 border-slate-200 text-slate-800 hover:bg-slate-200/70'
+                  }`}
+                  data-track="nav_user_menu_toggle"
+                  aria-expanded={isUserMenuOpen}
+                >
+                  {user.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-5 h-5 rounded-full object-cover border border-slate-300"
+                    />
+                  ) : (
+                    <div
+                      className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white font-bold ${
+                        user.role === 'admin' ? 'bg-purple-600' : 'bg-blue-600'
+                      }`}
+                    >
+                      {user.name.charAt(0)}
+                    </div>
+                  )}
+                  <span className="max-w-[100px] truncate">{user.name}</span>
+                  {user.role === 'admin' && (
+                    <span className="text-[10px] uppercase font-extrabold bg-purple-600 text-white px-1.5 py-0.5 rounded">
+                      Admin
+                    </span>
+                  )}
+                  <ChevronDown
+                    className={`w-3 h-3 text-slate-500 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+
+                {/* Dropdown Menu */}
+                {isUserMenuOpen && (
+                  <div className="absolute right-0 top-full mt-1.5 w-60 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="px-4 py-2 border-b border-slate-100">
+                      <div className="text-xs font-bold text-slate-800 truncate">{user.name}</div>
+                      <div className="text-[11px] text-slate-500 truncate">{user.email}</div>
+                      <div className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider bg-slate-100 text-slate-700">
+                        {user.role === 'admin' ? (
+                          <>
+                            <Shield className="w-3 h-3 text-purple-600" />
+                            <span className="text-purple-700">Administrator</span>
+                          </>
+                        ) : (
+                          <>
+                            <UserIcon className="w-3 h-3 text-blue-600" />
+                            <span className="text-blue-700">Participant Shopper</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="py-1">
+                      {user.role === 'admin' ? (
+                        <Link
+                          to="/admin"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-purple-50 hover:text-purple-700 transition-colors"
+                          data-track="nav_menu_admin_dashboard"
+                        >
+                          <Activity className="w-3.5 h-3.5 text-purple-600" />
+                          <span>Usability Dashboard</span>
+                        </Link>
+                      ) : (
+                        <Link
+                          to="/cart"
+                          onClick={() => setIsUserMenuOpen(false)}
+                          className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                          data-track="nav_menu_cart"
+                        >
+                          <ShoppingCart className="w-3.5 h-3.5 text-blue-600" />
+                          <span>My Shopping Cart</span>
+                        </Link>
+                      )}
+
+                      {/* Quick Role Switcher for Simulator Ease */}
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setIsUserMenuOpen(false);
+                          const targetRole = user.role === 'admin' ? 'user' : 'admin';
+                          await demoLogin(targetRole);
+                          if (targetRole === 'admin') navigate('/admin');
+                          else navigate('/');
+                        }}
+                        className="w-full text-left flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
+                        data-track="nav_menu_switch_role"
+                      >
+                        {user.role === 'admin' ? (
+                          <>
+                            <UserIcon className="w-3.5 h-3.5 text-blue-500" />
+                            <span>Switch to Shopper View</span>
+                          </>
+                        ) : (
+                          <>
+                            <Shield className="w-3.5 h-3.5 text-purple-500" />
+                            <span>Switch to Admin View</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          logout();
+                          navigate('/');
+                        }}
+                        className="w-full text-left flex items-center gap-2 px-4 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                        data-track="nav_menu_logout"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Cart Button */}
             <Link
