@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { productImages } from './update-images';
 
 const prisma = new PrismaClient();
 
@@ -1083,7 +1084,7 @@ async function main() {
 
   for (const item of productsData) {
     await prisma.product.create({
-      data: item,
+      data: { ...item, image: productImages[item.slug] || item.image },
     });
   }
 

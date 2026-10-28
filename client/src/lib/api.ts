@@ -372,6 +372,21 @@ export const api = {
     return order;
   },
 
+  async getOrders(sessionId?: string): Promise<Order[]> {
+    try {
+      const url = sessionId
+        ? `${API_BASE_URL}/orders?sessionId=${encodeURIComponent(sessionId)}`
+        : `${API_BASE_URL}/orders`;
+      const res = await fetch(url);
+      if (res.ok) {
+        return await handleResponse<Order[]>(res, []);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch orders from server', err);
+    }
+    return [];
+  },
+
   async getOrder(orderId: number | string): Promise<Order | null> {
     try {
       const res = await fetch(`${API_BASE_URL}/orders/${orderId}`);

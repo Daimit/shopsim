@@ -11,6 +11,36 @@ const safeJsonParse = (str: string, fallback: any = {}) => {
   }
 };
 
+// GET /api/orders - Get orders list
+router.get('/orders', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { sessionId } = req.query;
+    const where = sessionId ? { sessionId: String(sessionId) } : {};
+    const orders = await prisma.order.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        discount: true,
+      },
+      take: 25,
+    });
+
+    res.json({
+      success: true,
+      data: orders.map((order) => {
+        const parsed = safeJsonParse(order.shippingData);
+        return {
+          ...order,
+          shippingData: parsed,
+          items: parsed.items || [],
+        };
+      }),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // POST /api/checkout/:sessionId - Create order
 router.post('/checkout/:sessionId', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -57,6 +87,22 @@ router.post('/checkout/:sessionId', async (req: Request, res: Response, next: Ne
     const roundedDiscount = Math.round(discountAmount * 100) / 100;
     const totalAmount = Math.max(0, Math.round((roundedSubtotal - roundedDiscount) * 100) / 100);
 
+    // Extract items snapshot for order history
+    const orderItems = cart.items.map((i) => ({
+      productId: i.productId,
+      name: i.product.name,
+      slug: i.product.slug,
+      price: i.product.price,
+      quantity: i.quantity,
+      image: i.product.image,
+    }));
+
+    const parsedShipping = typeof shippingData === 'string' ? safeJsonParse(shippingData) : shippingData;
+    const serializedShipping = JSON.stringify({
+      ...parsedShipping,
+      items: orderItems,
+    });
+
     // Save order
     const order = await prisma.order.create({
       data: {
@@ -64,7 +110,7 @@ router.post('/checkout/:sessionId', async (req: Request, res: Response, next: Ne
         totalAmount,
         discountAmount: roundedDiscount,
         discountId: cart.discountId,
-        shippingData: typeof shippingData === 'string' ? shippingData : JSON.stringify(shippingData),
+        shippingData: serializedShipping,
         paymentMethod: typeof paymentMethod === 'string' ? paymentMethod : 'credit_card',
         status: 'confirmed',
       },
@@ -73,7 +119,7 @@ router.post('/checkout/:sessionId', async (req: Request, res: Response, next: Ne
       },
     });
 
-    // Optionally clear cart items after checkout
+    // Clear cart items after checkout
     await prisma.cartItem.deleteMany({
       where: { sessionId },
     });
@@ -92,6 +138,7 @@ router.post('/checkout/:sessionId', async (req: Request, res: Response, next: Ne
       data: {
         ...order,
         shippingData: safeJsonParse(order.shippingData),
+        items: orderItems,
       },
     });
   } catch (error) {
@@ -99,7 +146,7 @@ router.post('/checkout/:sessionId', async (req: Request, res: Response, next: Ne
   }
 });
 
-// GET /api/orders/:orderId - Get order confirmation
+// GET /api/orders/:orderId - Get single order confirmation
 router.get('/orders/:orderId', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { orderId } = req.params;
@@ -122,11 +169,14 @@ router.get('/orders/:orderId', async (req: Request, res: Response, next: NextFun
       return;
     }
 
+    const parsed = safeJsonParse(order.shippingData);
+
     res.json({
       success: true,
       data: {
         ...order,
-        shippingData: safeJsonParse(order.shippingData),
+        shippingData: parsed,
+        items: parsed.items || [],
       },
     });
   } catch (error) {

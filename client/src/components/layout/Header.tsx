@@ -10,13 +10,15 @@ import {
   LogIn,
   LogOut,
   Shield,
-  User as UserIcon
+  User as UserIcon,
+  Package,
+  ArrowRight
 } from 'lucide-react';
 import { useCartStore } from '../../store/cartStore';
 import { useCompareStore } from '../../store/compareStore';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../lib/api';
-import { Category } from '../../types';
+import { Category, Product } from '../../types';
 import { tracker } from '../../lib/tracker';
 
 export const Header: React.FC = () => {
@@ -26,16 +28,24 @@ export const Header: React.FC = () => {
   const { user, logout, demoLogin } = useAuthStore();
 
   const [categories, setCategories] = useState<Category[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [isCatOpen, setIsCatOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchCart();
     api.getCategories().then((res) => {
       if (Array.isArray(res)) setCategories(res);
+    }).catch(() => {});
+
+    api.getProducts().then((res) => {
+      if (Array.isArray(res)) setAllProducts(res);
     }).catch(() => {});
   }, [fetchCart]);
 
@@ -48,6 +58,9 @@ export const Header: React.FC = () => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
         setIsUserMenuOpen(false);
       }
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
+        setIsSearchFocused(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -57,10 +70,34 @@ export const Header: React.FC = () => {
     e.preventDefault();
     const query = searchQuery.trim();
     if (query) {
+      setIsSearchFocused(false);
       tracker.track('search_query', 'search_form', { query });
       navigate(`/search?q=${encodeURIComponent(query)}`);
     }
   };
+
+  const handleSelectAutocompleteProduct = (prod: Product) => {
+    setIsSearchFocused(false);
+    setSearchQuery('');
+    tracker.track('search_autocomplete_select', `product_${prod.id}`, {
+      productId: prod.id,
+      slug: prod.slug,
+      name: prod.name,
+      query: searchQuery.trim(),
+    });
+    navigate(`/product/${prod.slug}`);
+  };
+
+  // Filter products for autocomplete
+  const filteredProducts = searchQuery.trim().length >= 2
+    ? allProducts
+        .filter((p) =>
+          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          p.category?.name.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .slice(0, 5)
+    : [];
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-xs">
@@ -156,13 +193,14 @@ export const Header: React.FC = () => {
             </nav>
           </div>
 
-          {/* Search Bar in center */}
-          <div className="flex-1 max-w-md mx-2">
+          {/* Search Bar with Live Autocomplete Dropdown */}
+          <div className="flex-1 max-w-md mx-2 relative" ref={searchContainerRef}>
             <form onSubmit={handleSearchSubmit} className="relative">
               <input
                 type="text"
-                placeholder="Search products..."
+                placeholder="Search smartphones, laptops, clothing..."
                 value={searchQuery}
+                onFocus={() => setIsSearchFocused(true)}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-slate-100 hover:bg-slate-50 focus:bg-white text-sm text-slate-800 rounded-full border border-slate-200 focus:border-blue-500 focus:outline-hidden focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-slate-400"
                 data-track="search_input"
@@ -175,9 +213,61 @@ export const Header: React.FC = () => {
                 <Search className="w-4 h-4" />
               </button>
             </form>
+
+            {/* Live Autocomplete Results Floating Menu */}
+            {isSearchFocused && searchQuery.trim().length >= 2 && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-200/90 py-2 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-4 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 flex items-center justify-between">
+                  <span>Product Suggestions</span>
+                  <span>{filteredProducts.length} results</span>
+                </div>
+
+                {filteredProducts.length > 0 ? (
+                  <div className="divide-y divide-slate-50">
+                    {filteredProducts.map((prod) => (
+                      <button
+                        key={prod.id}
+                        type="button"
+                        onClick={() => handleSelectAutocompleteProduct(prod)}
+                        className="w-full text-left px-3.5 py-2.5 hover:bg-blue-50/70 transition-colors flex items-center gap-3 group cursor-pointer"
+                      >
+                        <img
+                          src={prod.image}
+                          alt={prod.name}
+                          className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-semibold text-slate-800 group-hover:text-blue-600 truncate transition-colors">
+                            {prod.name}
+                          </p>
+                          <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                            {prod.category?.name && <span>{prod.category.name}</span>}
+                            <span>&bull;</span>
+                            <span className="font-bold text-slate-700">${prod.price.toFixed(2)}</span>
+                          </div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" />
+                      </button>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={handleSearchSubmit}
+                      className="w-full text-center py-2.5 bg-slate-50 hover:bg-slate-100 text-xs font-bold text-blue-600 transition-colors block border-t border-slate-100"
+                    >
+                      Press Enter to view all results for "{searchQuery}" &rarr;
+                    </button>
+                  </div>
+                ) : (
+                  <div className="px-4 py-6 text-center text-xs text-slate-500">
+                    No products found matching "<strong className="text-slate-800">{searchQuery}</strong>".
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Right Action Icons: Admin Shortcut (Only for Admin role), Auth Profile / Login Button, Cart */}
+          {/* Right Action Icons: Admin Shortcut, Auth Profile / Login Button, Cart */}
           <div className="flex items-center gap-2.5">
             {/* Admin Usability Dashboard Shortcut - Strictly ONLY for Admin accounts */}
             {user?.role === 'admin' && (
@@ -256,13 +346,24 @@ export const Header: React.FC = () => {
                         ) : (
                           <>
                             <UserIcon className="w-3 h-3 text-blue-600" />
-                            <span className="text-blue-700">Participant Shopper</span>
+                            <span className="text-blue-700">Shopper</span>
                           </>
                         )}
                       </div>
                     </div>
 
                     <div className="py-1">
+                      {/* My Orders link for all users */}
+                      <Link
+                        to="/orders"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                        data-track="nav_menu_orders"
+                      >
+                        <Package className="w-3.5 h-3.5 text-blue-600" />
+                        <span>My Orders & Tracking</span>
+                      </Link>
+
                       {user.role === 'admin' ? (
                         <Link
                           to="/admin"

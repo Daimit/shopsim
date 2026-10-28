@@ -24,7 +24,7 @@ export const HomePage: React.FC = () => {
   const [heroSearch, setHeroSearch] = useState('');
 
   useEffect(() => {
-    document.title = 'ShopSim - E-Commerce Usability Simulator';
+    document.title = 'ShopSim - Next-Gen Tech & Premium Essentials';
     Promise.all([
       api.getProducts(),
       api.getCategories()
@@ -70,15 +70,15 @@ export const HomePage: React.FC = () => {
         <div className="relative z-10 max-w-2xl space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/30 border border-blue-400/30 text-xs font-semibold text-blue-100 backdrop-blur-xs">
             <Sparkles className="w-3.5 h-3.5 text-blue-300" />
-            <span>Usability Study Environment v1.0</span>
+            <span>Spring Mega Sale &bull; Up to 40% Off</span>
           </div>
 
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
-            Welcome to <span className="text-blue-200">ShopSim</span>
+            Next-Generation Tech & <span className="text-blue-200">Everyday Essentials</span>
           </h1>
 
           <p className="text-blue-100 text-sm sm:text-base leading-relaxed max-w-xl">
-            Experience our simulated e-commerce laboratory designed to analyze navigation friction, multi-step checkout ease, and comparative decision making.
+            Discover cutting-edge smartphones, ultra-portable laptops, audiophile headphones, and designer apparel with free express delivery and price-match guarantee.
           </p>
 
           {/* Hero Quick Search */}
@@ -107,15 +107,15 @@ export const HomePage: React.FC = () => {
           <div className="pt-4 flex flex-wrap gap-4 text-xs text-blue-200">
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Full interaction logging</span>
+              <span>Free Express Delivery &gt; $50</span>
             </div>
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Side-by-side comparison matrix</span>
+              <span>30-Day Money-Back Guarantee</span>
             </div>
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Multi-step checkout wizard</span>
+              <span>2-Year Full Warranty</span>
             </div>
           </div>
         </div>
@@ -196,10 +196,10 @@ export const HomePage: React.FC = () => {
           </div>
           <div>
             <h3 className="font-bold text-slate-900 text-sm sm:text-base">
-              Participating in the Usability Study?
+              Special Shopper Discount
             </h3>
             <p className="text-xs text-slate-500 mt-1 max-w-xl">
-              Follow instructions provided in the dark banner above. Use promo code <strong>SAVE20</strong> at checkout to test discount validations.
+              Enjoy an extra 20% off your entire cart at checkout with coupon code <strong>SAVE20</strong>. Limited time promotion for all members.
             </p>
           </div>
         </div>
@@ -208,7 +208,7 @@ export const HomePage: React.FC = () => {
           to="/compare"
           className="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-800 font-semibold text-xs rounded-xl border border-slate-200 shadow-2xs transition-colors shrink-0"
         >
-          <span>Open Comparison Matrix</span>
+          <span>Compare Flagships</span>
           <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       </section>

@@ -12,13 +12,43 @@ import {
   ShieldCheck,
   RefreshCw,
   Shield,
-  LogIn
+  LogIn,
+  Download,
+  Search,
+  Filter
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 export const DashboardPage: React.FC = () => {
   const [sessions, setSessions] = useState<TestSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'in_progress'>('all');
+  const [deviceFilter, setDeviceFilter] = useState<'all' | 'desktop' | 'mobile'>('all');
+
+  const handleExportSessionsCSV = () => {
+    if (!sessions.length) return;
+    const headers = ['Participant ID', 'Session ID', 'Scenario', 'Screen Size', 'Status', 'Started At', 'Ended At', 'Events'];
+    const rows = sessions.map(s => [
+      `"${s.participantId}"`,
+      `"${s.id}"`,
+      `"${s.scenarioId}"`,
+      `"${s.screenSize || 'N/A'}"`,
+      s.completed ? 'Completed' : 'In Progress',
+      `"${s.startedAt}"`,
+      `"${s.endedAt || 'Active'}"`,
+      s.eventCount || 0,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `shopsim_sessions_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const fetchSessions = async () => {
     setIsLoading(true);
@@ -119,6 +149,14 @@ export const DashboardPage: React.FC = () => {
             <span>Usability Analytics</span>
           </Link>
           <button
+            onClick={handleExportSessionsCSV}
+            disabled={sessions.length === 0}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export CSV</span>
+          </button>
+          <button
             onClick={fetchSessions}
             disabled={isLoading}
             className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 shadow-2xs transition-colors"
@@ -178,9 +216,45 @@ export const DashboardPage: React.FC = () => {
 
       {/* Test Sessions Table */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-base font-bold text-slate-900">Recorded Sessions</h2>
-          <span className="text-xs text-slate-400">Click row to inspect event timeline</span>
+        <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Recorded Sessions</h2>
+            <span className="text-xs text-slate-400">Click row to inspect event timeline</span>
+          </div>
+
+          {/* Interactive Filtering Controls */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+              <input
+                type="text"
+                placeholder="Search participant..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:outline-hidden w-44"
+              />
+            </div>
+
+            <select
+              value={statusFilter}
+              onChange={(e: any) => setStatusFilter(e.target.value)}
+              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium focus:bg-white focus:outline-hidden"
+            >
+              <option value="all">All Statuses</option>
+              <option value="completed">Completed Only</option>
+              <option value="in_progress">In Progress</option>
+            </select>
+
+            <select
+              value={deviceFilter}
+              onChange={(e: any) => setDeviceFilter(e.target.value)}
+              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium focus:bg-white focus:outline-hidden"
+            >
+              <option value="all">All Devices</option>
+              <option value="desktop">Desktop (1920x1080)</option>
+              <option value="mobile">Mobile (390x844)</option>
+            </select>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -197,7 +271,19 @@ export const DashboardPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 bg-white">
-              {sessions.map((sess) => {
+              {(sessions.filter((sess) => {
+                if (searchTerm.trim()) {
+                  const q = searchTerm.toLowerCase();
+                  const matchPart = sess.participantId?.toLowerCase().includes(q);
+                  const matchId = sess.id?.toLowerCase().includes(q);
+                  if (!matchPart && !matchId) return false;
+                }
+                if (statusFilter === 'completed' && !sess.completed) return false;
+                if (statusFilter === 'in_progress' && sess.completed) return false;
+                if (deviceFilter === 'mobile' && !sess.screenSize?.includes('390')) return false;
+                if (deviceFilter === 'desktop' && sess.screenSize?.includes('390')) return false;
+                return true;
+              })).map((sess) => {
                 const isCurrent = sess.id === tracker.getSessionId();
                 return (
                   <tr

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Cart } from '../types';
 import { api } from '../lib/api';
 import { tracker } from '../lib/tracker';
+import { useToastStore } from './toastStore';
 
 interface CartState {
   cart: Cart;
@@ -22,7 +23,7 @@ const initialCart: Cart = {
   subtotal: 0,
   discount: 0,
   total: 0,
-  itemCount: 0
+  itemCount: 0,
 };
 
 export const useCartStore = create<CartState>((set, get) => ({
@@ -46,7 +47,7 @@ export const useCartStore = create<CartState>((set, get) => ({
     try {
       const sessionId = tracker.getSessionId();
       const updatedCart = await api.addToCart(sessionId, productId, quantity);
-      const addedItem = updatedCart.items.find(i => i.productId === productId);
+      const addedItem = updatedCart.items.find((i) => i.productId === productId);
 
       tracker.track('cart_add', `product_${productId}`, {
         productId,
@@ -57,17 +58,34 @@ export const useCartStore = create<CartState>((set, get) => ({
         total: updatedCart.total,
       });
 
+      if (addedItem) {
+        useToastStore.getState().showToast({
+          type: 'success',
+          message: 'Added to Cart!',
+          submessage: `${addedItem.product.name} • $${addedItem.product.price.toFixed(2)}`,
+          image: addedItem.product.image,
+          actionText: 'View Cart',
+          actionLink: '/cart',
+        });
+      }
+
       set({ cart: updatedCart, isLoading: false });
       return true;
     } catch (err: any) {
-      set({ error: err?.message || 'Failed to add item to cart', isLoading: false });
+      const msg = err?.message || 'Failed to add item to cart';
+      useToastStore.getState().showToast({
+        type: 'error',
+        message: 'Could not add to cart',
+        submessage: msg,
+      });
+      set({ error: msg, isLoading: false });
       return false;
     }
   },
 
   updateQuantity: async (itemId: number, quantity: number, method = 'stepper') => {
     const { cart } = get();
-    const existingItem = cart.items.find(i => i.id === itemId);
+    const existingItem = cart.items.find((i) => i.id === itemId);
     const oldQty = existingItem?.quantity || 1;
 
     try {
@@ -90,7 +108,7 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   removeItem: async (itemId: number) => {
     const { cart } = get();
-    const itemToRemove = cart.items.find(i => i.id === itemId);
+    const itemToRemove = cart.items.find((i) => i.id === itemId);
 
     try {
       const sessionId = tracker.getSessionId();
@@ -102,6 +120,14 @@ export const useCartStore = create<CartState>((set, get) => ({
         productName: itemToRemove?.product.name,
         price: itemToRemove?.product.price,
       });
+
+      if (itemToRemove) {
+        useToastStore.getState().showToast({
+          type: 'info',
+          message: 'Item removed',
+          submessage: `${itemToRemove.product.name} removed from your cart`,
+        });
+      }
 
       set({ cart: updatedCart });
     } catch (err: any) {
@@ -120,6 +146,12 @@ export const useCartStore = create<CartState>((set, get) => ({
         discountAmount: updatedCart.discount,
       });
 
+      useToastStore.getState().showToast({
+        type: 'success',
+        message: `Promo code ${code.toUpperCase()} applied!`,
+        submessage: `You saved $${updatedCart.discount.toFixed(2)} on this order.`,
+      });
+
       set({ cart: updatedCart, error: null });
       return { success: true };
     } catch (err: any) {
@@ -129,6 +161,12 @@ export const useCartStore = create<CartState>((set, get) => ({
         code,
         success: false,
         error: msg,
+      });
+
+      useToastStore.getState().showToast({
+        type: 'error',
+        message: 'Invalid Promo Code',
+        submessage: msg,
       });
 
       return { success: false, message: msg };
@@ -145,6 +183,12 @@ export const useCartStore = create<CartState>((set, get) => ({
         code,
       });
 
+      useToastStore.getState().showToast({
+        type: 'info',
+        message: 'Coupon removed',
+        submessage: 'Discount has been removed from your total',
+      });
+
       set({ cart: updatedCart });
     } catch (err: any) {
       set({ error: err?.message || 'Failed to remove discount' });
@@ -155,5 +199,5 @@ export const useCartStore = create<CartState>((set, get) => ({
     const sessionId = tracker.getSessionId();
     const updatedCart = await api.clearCart(sessionId);
     set({ cart: updatedCart });
-  }
+  },
 }));

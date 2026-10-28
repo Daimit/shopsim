@@ -5,6 +5,7 @@ import { TaskBanner } from './components/tracking/TaskBanner';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { AuthPromptModal } from './components/auth/AuthPromptModal';
+import { ToastContainer } from './components/ui/ToastContainer';
 import { AdminRouteGuard } from './components/auth/AdminRouteGuard';
 import { useAuthStore } from './store/authStore';
 
@@ -16,6 +17,7 @@ import { ProductPage } from './pages/ProductPage';
 import { ComparePage } from './pages/ComparePage';
 import { CartPage } from './pages/CartPage';
 import { CheckoutPage } from './pages/CheckoutPage';
+import { OrdersPage } from './pages/OrdersPage';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/admin/DashboardPage';
 import { SessionDetailPage } from './pages/admin/SessionDetailPage';
@@ -27,6 +29,7 @@ export const App: React.FC = () => {
   useEffect(() => {
     loadSession();
   }, [loadSession]);
+
   return (
     <BrowserRouter>
       <EventProvider>
@@ -36,6 +39,9 @@ export const App: React.FC = () => {
 
           {/* Authentication Requirement Modal */}
           <AuthPromptModal />
+
+          {/* Global Toast Micro-interaction Notification Container */}
+          <ToastContainer />
 
           {/* Sticky Header */}
           <Header />
@@ -50,6 +56,7 @@ export const App: React.FC = () => {
               <Route path="/compare" element={<ComparePage />} />
               <Route path="/cart" element={<CartPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
+              <Route path="/orders" element={<OrdersPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route
                 path="/admin"
