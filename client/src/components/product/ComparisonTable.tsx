@@ -4,11 +4,14 @@ import { Product } from '../../types';
 import { RatingStars } from './RatingStars';
 import { useCompareStore } from '../../store/compareStore';
 import { useCartStore } from '../../store/cartStore';
+import { useAuthStore } from '../../store/authStore';
 import { Trash2, ShoppingCart, Check, Scale } from 'lucide-react';
 
 export const ComparisonTable: React.FC = () => {
   const { items, removeItem, clearCompare } = useCompareStore();
   const addItem = useCartStore((state) => state.addItem);
+  const user = useAuthStore((state) => state.user);
+  const openAuthModal = useAuthStore((state) => state.openAuthModal);
   const [addedMap, setAddedMap] = React.useState<Record<number, boolean>>({});
 
   if (items.length === 0) {
@@ -48,6 +51,18 @@ export const ComparisonTable: React.FC = () => {
 
   const handleAddToCart = async (product: Product) => {
     if (product.stock <= 0) return;
+    if (!user) {
+      openAuthModal(`Please sign in to add "${product.name}" to your shopping cart.`, async () => {
+        const ok = await addItem(product.id, 1);
+        if (ok) {
+          setAddedMap((prev) => ({ ...prev, [product.id]: true }));
+          setTimeout(() => {
+            setAddedMap((prev) => ({ ...prev, [product.id]: false }));
+          }, 1500);
+        }
+      });
+      return;
+    }
     const ok = await addItem(product.id, 1);
     if (ok) {
       setAddedMap((prev) => ({ ...prev, [product.id]: true }));

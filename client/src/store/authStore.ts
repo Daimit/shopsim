@@ -10,6 +10,13 @@ interface AuthState {
   error: string | null;
   demoUsers: DemoAccount[];
   
+  // Auth Modal state for guarding protected actions (add to cart, buy, checkout)
+  isAuthModalOpen: boolean;
+  authModalReason: string;
+  pendingAction: (() => void) | null;
+  openAuthModal: (reason?: string, onAuthorized?: () => void) => void;
+  closeAuthModal: () => void;
+
   // Computed helpers
   isAuthenticated: boolean;
   isAdmin: boolean;
@@ -30,6 +37,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   error: null,
   demoUsers: [],
+  isAuthModalOpen: false,
+  authModalReason: 'Please sign in to continue with your shopping experience.',
+  pendingAction: null,
 
   get isAuthenticated() {
     return !!get().user;
@@ -40,6 +50,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   clearError: () => set({ error: null }),
+
+  openAuthModal: (reason = 'Please sign in to add products to your cart or complete your purchase.', onAuthorized) => {
+    set({
+      isAuthModalOpen: true,
+      authModalReason: reason,
+      pendingAction: onAuthorized || null,
+      error: null
+    });
+    tracker.track('auth_required_prompt', 'auth_modal', { reason });
+  },
+
+  closeAuthModal: () => {
+    set({
+      isAuthModalOpen: false,
+      pendingAction: null,
+      error: null
+    });
+  },
 
   loadSession: async () => {
     try {
@@ -90,11 +118,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         localStorage.setItem('shopsim_auth_token', res.token);
         localStorage.setItem('shopsim_auth_user', JSON.stringify(res.user));
         
+        const pending = get().pendingAction;
         set({
           user: res.user,
           token: res.token,
           isLoading: false,
-          error: null
+          error: null,
+          isAuthModalOpen: false,
+          pendingAction: null
         });
 
         tracker.track('login_success', 'login_form', {
@@ -102,6 +133,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           role: res.user.role,
           email: res.user.email
         });
+
+        if (pending) {
+          try {
+            pending();
+          } catch (e) {
+            console.error('Error executing pending action post-login:', e);
+          }
+        }
 
         return true;
       } else {
@@ -130,17 +169,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         localStorage.setItem('shopsim_auth_token', res.token);
         localStorage.setItem('shopsim_auth_user', JSON.stringify(res.user));
 
+        const pending = get().pendingAction;
         set({
           user: res.user,
           token: res.token,
           isLoading: false,
-          error: null
+          error: null,
+          isAuthModalOpen: false,
+          pendingAction: null
         });
 
         tracker.track('demo_login_success', 'quick_login_button', {
           role: res.user.role,
           email: res.user.email
         });
+
+        if (pending) {
+          try {
+            pending();
+          } catch (e) {
+            console.error('Error executing pending action post-login:', e);
+          }
+        }
 
         return true;
       } else {
@@ -163,11 +213,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         localStorage.setItem('shopsim_auth_token', res.token);
         localStorage.setItem('shopsim_auth_user', JSON.stringify(res.user));
 
+        const pending = get().pendingAction;
         set({
           user: res.user,
           token: res.token,
           isLoading: false,
-          error: null
+          error: null,
+          isAuthModalOpen: false,
+          pendingAction: null
         });
 
         tracker.track('register_success', 'register_form', {
@@ -175,6 +228,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           role: res.user.role,
           email: res.user.email
         });
+
+        if (pending) {
+          try {
+            pending();
+          } catch (e) {
+            console.error('Error executing pending action post-register:', e);
+          }
+        }
 
         return true;
       } else {

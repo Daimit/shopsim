@@ -5,6 +5,7 @@ import { Product } from '../../types';
 import { RatingStars } from './RatingStars';
 import { CompareButton } from './CompareButton';
 import { useCartStore } from '../../store/cartStore';
+import { useAuthStore } from '../../store/authStore';
 
 interface ProductCardProps {
   product: Product;
@@ -12,6 +13,8 @@ interface ProductCardProps {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const addItem = useCartStore((state) => state.addItem);
+  const user = useAuthStore((state) => state.user);
+  const openAuthModal = useAuthStore((state) => state.openAuthModal);
   const [isAdding, setIsAdding] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
 
@@ -21,6 +24,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     e.preventDefault();
     e.stopPropagation();
     if (isOutOfStock || isAdding) return;
+
+    if (!user) {
+      openAuthModal(`Please sign in to add "${product.name}" to your shopping cart.`, async () => {
+        setIsAdding(true);
+        const success = await addItem(product.id, 1);
+        setIsAdding(false);
+        if (success) {
+          setJustAdded(true);
+          setTimeout(() => setJustAdded(false), 1500);
+        }
+      });
+      return;
+    }
 
     setIsAdding(true);
     const success = await addItem(product.id, 1);

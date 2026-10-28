@@ -4,6 +4,7 @@ import { EventProvider } from './components/tracking/EventProvider';
 import { TaskBanner } from './components/tracking/TaskBanner';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
+import { AuthPromptModal } from './components/auth/AuthPromptModal';
 import { useAuthStore } from './store/authStore';
 
 // Pages
@@ -31,6 +32,9 @@ export const App: React.FC = () => {
         <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800">
           {/* Study Task Banner */}
           <TaskBanner />
+
+          {/* Authentication Requirement Modal */}
+          <AuthPromptModal />
 
           {/* Sticky Header */}
           <Header />

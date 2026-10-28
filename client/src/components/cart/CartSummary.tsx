@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../../store/cartStore';
+import { useAuthStore } from '../../store/authStore';
 import { DiscountInput } from './DiscountInput';
 import { ArrowRight, ShieldCheck, Truck } from 'lucide-react';
 import { tracker } from '../../lib/tracker';
@@ -8,8 +9,17 @@ import { tracker } from '../../lib/tracker';
 export const CartSummary: React.FC = () => {
   const navigate = useNavigate();
   const { cart } = useCartStore();
+  const user = useAuthStore((state) => state.user);
+  const openAuthModal = useAuthStore((state) => state.openAuthModal);
 
   const handleCheckoutClick = () => {
+    if (!user) {
+      openAuthModal('Please sign in to proceed to checkout and complete your order.', () => {
+        navigate('/checkout');
+      });
+      return;
+    }
+
     tracker.track('checkout_start', 'proceed_to_checkout_btn', {
       itemCount: cart.itemCount,
       subtotal: cart.subtotal,

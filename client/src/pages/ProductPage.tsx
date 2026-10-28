@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { tracker } from '../lib/tracker';
 import { useCartStore } from '../store/cartStore';
 import { useCompareStore } from '../store/compareStore';
+import { useAuthStore } from '../store/authStore';
 import { Breadcrumb } from '../components/layout/Breadcrumb';
 import { RatingStars } from '../components/product/RatingStars';
 import { QuantityStepper } from '../components/cart/QuantityStepper';
@@ -31,6 +32,8 @@ export const ProductPage: React.FC = () => {
   const [justAdded, setJustAdded] = useState(false);
 
   const addItem = useCartStore((state) => state.addItem);
+  const user = useAuthStore((state) => state.user);
+  const openAuthModal = useAuthStore((state) => state.openAuthModal);
   const { isInCompare, addItem: addToCompare, removeItem: removeFromCompare } = useCompareStore();
 
   useEffect(() => {
@@ -93,6 +96,20 @@ export const ProductPage: React.FC = () => {
 
   const handleAddToCart = async () => {
     if (isOutOfStock || isAdding) return;
+
+    if (!user) {
+      openAuthModal(`Please sign in to add "${product.name}" to your shopping cart.`, async () => {
+        setIsAdding(true);
+        const success = await addItem(product.id, quantity);
+        setIsAdding(false);
+        if (success) {
+          setJustAdded(true);
+          setTimeout(() => setJustAdded(false), 2000);
+        }
+      });
+      return;
+    }
+
     setIsAdding(true);
     const success = await addItem(product.id, quantity);
     setIsAdding(false);
