@@ -177,22 +177,20 @@ export const Header: React.FC = () => {
             </form>
           </div>
 
-          {/* Right Action Icons: Admin Shortcut, Auth Profile / Login Button, Cart */}
+          {/* Right Action Icons: Admin Shortcut (Only for Admin role), Auth Profile / Login Button, Cart */}
           <div className="flex items-center gap-2.5">
-            {/* Admin Usability Dashboard Shortcut */}
-            <Link
-              to="/admin"
-              className={`hidden sm:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border transition-colors ${
-                user?.role === 'admin'
-                  ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100'
-                  : 'text-slate-600 hover:text-blue-600 hover:bg-slate-50 border-slate-200'
-              }`}
-              title="Admin Usability Dashboard"
-              data-track="nav_admin_dashboard"
-            >
-              <Activity className={`w-3.5 h-3.5 ${user?.role === 'admin' ? 'text-purple-600' : 'text-blue-500'}`} />
-              <span>Dashboard</span>
-            </Link>
+            {/* Admin Usability Dashboard Shortcut - Strictly ONLY for Admin accounts */}
+            {user?.role === 'admin' && (
+              <Link
+                to="/admin"
+                className="hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100 transition-colors shadow-2xs"
+                title="Admin Usability Dashboard"
+                data-track="nav_admin_dashboard"
+              >
+                <Activity className="w-3.5 h-3.5 text-purple-600" />
+                <span>Admin Dashboard</span>
+              </Link>
+            )}
 
             {/* Auth Component: Sign In Button or User/Admin Pill */}
             {!user ? (
@@ -287,31 +285,22 @@ export const Header: React.FC = () => {
                         </Link>
                       )}
 
-                      {/* Quick Role Switcher for Simulator Ease */}
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          setIsUserMenuOpen(false);
-                          const targetRole = user.role === 'admin' ? 'user' : 'admin';
-                          await demoLogin(targetRole);
-                          if (targetRole === 'admin') navigate('/admin');
-                          else navigate('/');
-                        }}
-                        className="w-full text-left flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
-                        data-track="nav_menu_switch_role"
-                      >
-                        {user.role === 'admin' ? (
-                          <>
-                            <UserIcon className="w-3.5 h-3.5 text-blue-500" />
-                            <span>Switch to Shopper View</span>
-                          </>
-                        ) : (
-                          <>
-                            <Shield className="w-3.5 h-3.5 text-purple-500" />
-                            <span>Switch to Admin View</span>
-                          </>
-                        )}
-                      </button>
+                      {/* Only Admin can switch to Shopper simulation view */}
+                      {user.role === 'admin' && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setIsUserMenuOpen(false);
+                            await demoLogin('user');
+                            navigate('/');
+                          }}
+                          className="w-full text-left flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors cursor-pointer"
+                          data-track="nav_menu_switch_role"
+                        >
+                          <UserIcon className="w-3.5 h-3.5 text-blue-500" />
+                          <span>Switch to Shopper View</span>
+                        </button>
+                      )}
                     </div>
 
                     <div className="border-t border-slate-100 pt-1">

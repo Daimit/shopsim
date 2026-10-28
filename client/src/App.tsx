@@ -5,6 +5,7 @@ import { TaskBanner } from './components/tracking/TaskBanner';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
 import { AuthPromptModal } from './components/auth/AuthPromptModal';
+import { AdminRouteGuard } from './components/auth/AdminRouteGuard';
 import { useAuthStore } from './store/authStore';
 
 // Pages
@@ -50,9 +51,30 @@ export const App: React.FC = () => {
               <Route path="/cart" element={<CartPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/login" element={<LoginPage />} />
-              <Route path="/admin" element={<DashboardPage />} />
-              <Route path="/admin/analytics" element={<AnalyticsPage />} />
-              <Route path="/admin/sessions/:id" element={<SessionDetailPage />} />
+              <Route
+                path="/admin"
+                element={
+                  <AdminRouteGuard>
+                    <DashboardPage />
+                  </AdminRouteGuard>
+                }
+              />
+              <Route
+                path="/admin/analytics"
+                element={
+                  <AdminRouteGuard>
+                    <AnalyticsPage />
+                  </AdminRouteGuard>
+                }
+              />
+              <Route
+                path="/admin/sessions/:id"
+                element={
+                  <AdminRouteGuard>
+                    <SessionDetailPage />
+                  </AdminRouteGuard>
+                }
+              />
             </Routes>
           </main>
 
