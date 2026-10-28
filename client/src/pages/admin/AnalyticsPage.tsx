@@ -163,10 +163,7 @@ export const AnalyticsPage: React.FC = () => {
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Back to Sessions Dashboard</span>
             </Link>
-            <span className="text-slate-300">/</span>
-            <span className="text-xs font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
-              Milestone 4: Evaluation
-            </span>
+            
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
             <span>Usability Analytics & Findings</span>

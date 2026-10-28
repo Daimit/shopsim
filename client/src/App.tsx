@@ -1,9 +1,9 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { EventProvider } from './components/tracking/EventProvider';
-import { TaskBanner } from './components/tracking/TaskBanner';
 import { Header } from './components/layout/Header';
 import { Footer } from './components/layout/Footer';
+import { CompareTray } from './components/product/CompareTray';
 import { AuthPromptModal } from './components/auth/AuthPromptModal';
 import { ToastContainer } from './components/ui/ToastContainer';
 import { AdminRouteGuard } from './components/auth/AdminRouteGuard';
@@ -33,9 +33,10 @@ export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <EventProvider>
-        <div className="flex flex-col min-h-screen bg-slate-50 text-slate-800">
-          {/* Study Task Banner */}
-          <TaskBanner />
+        <div className="flex min-h-screen flex-col bg-slate-50 text-slate-800">
+          <a href="#main-content" className="skip-link">
+            Skip to main content
+          </a>
 
           {/* Authentication Requirement Modal */}
           <AuthPromptModal />
@@ -46,8 +47,9 @@ export const App: React.FC = () => {
           {/* Sticky Header */}
           <Header />
 
-          {/* Main View Area */}
-          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          <CompareTray />
+
+          <main id="main-content" className="mx-auto w-full max-w-7xl flex-1 px-4 pb-24 pt-6 sm:px-6 lg:px-8">
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/category/:slug" element={<CategoryPage />} />

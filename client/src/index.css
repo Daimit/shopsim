@@ -1,7 +1,80 @@
 @import "tailwindcss";
 
+:root {
+  --brand: #2563eb;
+  --brand-dark: #1d4ed8;
+  --surface: #f8fafc;
+  --ink: #0f172a;
+}
+
 @layer base {
-  body {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  html {
+    scroll-behavior: smooth;
   }
+
+  body {
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--surface);
+    color: var(--ink);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  ::selection {
+    background: #bfdbfe;
+    color: #0f172a;
+  }
+
+  :focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+  }
+
+  button:not(:disabled),
+  a,
+  [role='button'] {
+    cursor: pointer;
+  }
+
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -100px;
+  z-index: 100;
+  border-radius: 0.75rem;
+  background: #0f172a;
+  color: white;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.skip-link:focus {
+  top: 0.75rem;
+}
+
+.surface-card {
+  background: white;
+  border: 1px solid rgb(226 232 240 / 0.9);
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
 }

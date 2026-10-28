@@ -7,7 +7,7 @@ import { ProductGrid } from '../components/product/ProductGrid';
 import { Category, Product } from '../types';
 import { api } from '../lib/api';
 import { useFilterStore } from '../store/filterStore';
-import { X } from 'lucide-react';
+import { Filter, X } from 'lucide-react';
 
 export const CategoryPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -15,6 +15,7 @@ export const CategoryPage: React.FC = () => {
   const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const {
     subcategoryId,
@@ -102,20 +103,33 @@ export const CategoryPage: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 pb-16">
+    <div className="space-y-6 pb-8">
       <Breadcrumb items={breadcrumbs} />
 
       <div className="flex flex-col lg:flex-row gap-8 items-start">
-        {/* Left Filter Sidebar */}
-        <aside className="w-full lg:w-64 shrink-0 lg:sticky lg:top-24">
-          <FilterPanel
-            categories={allCategories}
-            currentCategory={category}
-          />
+        <aside className="w-full shrink-0 lg:sticky lg:top-24 lg:w-64">
+          <button
+            type="button"
+            className="mb-3 flex w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 lg:hidden"
+            onClick={() => setFiltersOpen((open) => !open)}
+            data-track="filters_toggle_mobile"
+          >
+            <span className="inline-flex items-center gap-2">
+              <Filter className="h-4 w-4 text-blue-600" />
+              Filters
+            </span>
+            <span className="text-xs text-slate-500">{filtersOpen ? 'Hide' : 'Show'}</span>
+          </button>
+          <div className={filtersOpen ? 'block' : 'hidden lg:block'}>
+            <FilterPanel
+              categories={allCategories}
+              currentCategory={category}
+            />
+          </div>
         </aside>
 
         {/* Right Content */}
-        <main className="flex-1 w-full space-y-6">
+        <div className="w-full flex-1 space-y-6">
           {/* Top Bar with title, count, chips, sort */}
           <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 shadow-2xs space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -170,7 +184,7 @@ export const CategoryPage: React.FC = () => {
             emptyTitle="No products match your criteria"
             emptyDescription="Try clearing or adjusting some filters in the left sidebar to expand your results."
           />
-        </main>
+        </div>
       </div>
     </div>
   );

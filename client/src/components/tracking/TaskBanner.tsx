@@ -43,8 +43,8 @@ export const TaskBanner: React.FC = () => {
   }
 
   return (
-    <aside aria-label="Usability study task banner" className="bg-slate-900 border-b border-slate-800 text-white px-4 py-2.5 relative z-40 transition-all">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3 text-sm">
+    <aside aria-label="Usability study task banner" className="relative z-40 border-b border-slate-800 bg-slate-900 px-4 py-2 text-white transition-all">
+      <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-2 text-sm md:flex-row md:items-center">
         {/* Left: Task badge and title */}
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="flex items-center gap-1.5 bg-blue-600 text-white px-2.5 py-1 rounded text-xs font-bold uppercase tracking-wider shrink-0">
@@ -91,9 +91,9 @@ export const TaskBanner: React.FC = () => {
         </div>
 
         {/* Center: Instruction text */}
-        <div className="flex-1 text-center md:text-left text-slate-200 font-medium px-2">
-          <span className="text-blue-300 font-bold mr-1.5">Instruction:</span>
-          {activeTask.instruction}
+        <div className="flex-1 px-0 text-left font-medium text-slate-200 md:px-2">
+          <span className="mr-1.5 font-bold text-blue-300">Instruction:</span>
+          <span className="line-clamp-2 md:line-clamp-1">{activeTask.instruction}</span>
         </div>
 
         {/* Right: Complete & Dismiss buttons */}

@@ -15,14 +15,13 @@ const STEPS = [
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({ currentStep, onStepClick }) => {
   return (
-    <div className="w-full max-w-3xl mx-auto py-6 px-4">
-      <div className="flex items-center justify-between relative">
-        {/* Connecting line */}
-        <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-slate-200 -translate-y-1/2 z-0"></div>
+    <div className="mx-auto w-full max-w-3xl px-2 py-6 sm:px-4">
+      <div className="relative flex items-start justify-between">
+        <div className="absolute top-[18px] right-4 left-4 z-0 h-0.5 bg-slate-200"></div>
         <div
-          className="absolute top-1/2 left-0 h-0.5 bg-blue-600 -translate-y-1/2 z-0 transition-all duration-300"
+          className="absolute top-[18px] left-4 z-0 h-0.5 bg-blue-600 transition-all duration-300"
           style={{
-            width: `${((Math.min(currentStep, 4) - 1) / (STEPS.length - 1)) * 100}%`
+            width: `calc(${((Math.min(currentStep, 4) - 1) / (STEPS.length - 1)) * 100}% - 1rem)`
           }}
         ></div>
 

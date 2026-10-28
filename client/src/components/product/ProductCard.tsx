@@ -50,7 +50,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
   return (
     <div
-      className="group bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-blue-200 transition-all duration-300 flex flex-col h-full overflow-hidden relative"
+      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-2xs transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md"
       data-track={`product_card_${product.slug}`}
     >
       {/* Dynamic Product Badges */}
@@ -102,30 +102,31 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       </Link>
 
       {/* Product Information */}
-      <div className="p-4 sm:p-5 flex flex-col flex-1 justify-between gap-3">
+      <div className="flex flex-1 flex-col justify-between gap-3 p-3 sm:p-5">
         <div>
-          {/* Rating */}
+          {product.category?.name && (
+            <p className="mb-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase">
+              {product.category.name}
+            </p>
+          )}
           <div className="mb-2">
             <RatingStars rating={product.rating} reviewCount={product.reviewCount} size="sm" />
           </div>
-
-          {/* Product Name */}
           <Link
             to={`/product/${product.slug}`}
-            className="block text-slate-800 hover:text-blue-600 font-bold text-sm sm:text-base leading-snug line-clamp-2 transition-colors"
+            className="block text-sm leading-snug font-bold text-slate-800 transition-colors line-clamp-2 hover:text-blue-600 sm:text-base"
             data-track={`product_card_title_${product.id}`}
           >
             {product.name}
           </Link>
         </div>
 
-        {/* Price & Add to Cart button */}
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2 mt-auto">
+        <div className="mt-auto flex flex-col gap-2 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+            <span className="block text-[10px] font-bold tracking-wider text-slate-400 uppercase">
               Price
             </span>
-            <span className="text-base sm:text-lg font-black text-slate-900">
+            <span className="text-base font-black text-slate-900 sm:text-lg">
               ${product.price.toFixed(2)}
             </span>
           </div>
@@ -134,24 +135,25 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             type="button"
             onClick={handleAddToCart}
             disabled={isOutOfStock || isAdding}
-            className={`inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer ${
+            className={`inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold shadow-xs transition-all ${
               isOutOfStock
-                ? 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
+                ? 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400'
                 : justAdded
                 ? 'bg-emerald-600 text-white shadow-emerald-500/20'
-                : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white shadow-blue-500/20'
+                : 'bg-blue-600 text-white shadow-blue-500/20 hover:bg-blue-700 active:bg-blue-800'
             }`}
             data-track={`product_card_add_cart_${product.id}`}
           >
             {justAdded ? (
               <>
-                <Check className="w-3.5 h-3.5" />
+                <Check className="h-3.5 w-3.5" />
                 <span>Added!</span>
               </>
             ) : (
               <>
-                <ShoppingCart className="w-3.5 h-3.5" />
-                <span>{isOutOfStock ? 'Sold Out' : 'Add to Cart'}</span>
+                <ShoppingCart className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">{isOutOfStock ? 'Sold Out' : 'Add to Cart'}</span>
+                <span className="sm:hidden">{isOutOfStock ? 'Out' : 'Add'}</span>
               </>
             )}
           </button>

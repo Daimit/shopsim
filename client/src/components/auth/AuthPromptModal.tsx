@@ -38,8 +38,18 @@ export const AuthPromptModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs duration-150 animate-in fade-in"
+      role="presentation"
+      onClick={closeAuthModal}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-prompt-title"
+        className="relative w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl duration-150 animate-in zoom-in-95"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Close Button */}
         <button
           type="button"
@@ -55,7 +65,7 @@ export const AuthPromptModal: React.FC = () => {
           <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-3 shadow-xs">
             <Lock className="w-6 h-6" />
           </div>
-          <h3 className="text-xl font-black text-slate-900 tracking-tight">
+          <h3 id="auth-prompt-title" className="text-xl font-black tracking-tight text-slate-900">
             Sign In Required
           </h3>
           <p className="text-xs sm:text-sm text-slate-500 mt-2 leading-relaxed">

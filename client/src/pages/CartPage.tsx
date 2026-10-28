@@ -20,7 +20,7 @@ export const CartPage: React.FC = () => {
 
   if (cart.items.length === 0) {
     return (
-      <div className="space-y-6 pb-20">
+      <div className="space-y-6 pb-8">
         <Breadcrumb items={breadcrumbs} />
 
         <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center max-w-lg mx-auto my-12 shadow-2xs">
@@ -45,7 +45,7 @@ export const CartPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="space-y-6 pb-8">
       <Breadcrumb items={breadcrumbs} />
 
       <div className="flex items-center justify-between border-b border-slate-200 pb-4">

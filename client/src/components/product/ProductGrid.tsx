@@ -18,9 +18,9 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[1, 2, 3, 4, 5, 6].map((idx) => (
-          <div key={idx} className="bg-white rounded-xl border border-slate-200 p-4 animate-pulse">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4 lg:gap-6">
+        {[1, 2, 3, 4, 5, 6, 7, 8].map((idx) => (
+          <div key={idx} className="animate-pulse rounded-2xl border border-slate-200 bg-white p-4">
             <div className="w-full aspect-square bg-slate-200 rounded-lg mb-4"></div>
             <div className="h-4 bg-slate-200 rounded w-1/3 mb-2"></div>
             <div className="h-5 bg-slate-200 rounded w-4/5 mb-4"></div>
@@ -36,7 +36,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 
   if (products.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-slate-200 p-12 text-center max-w-lg mx-auto my-8">
+      <div className="mx-auto my-8 max-w-lg rounded-2xl border border-slate-200 bg-white p-12 text-center">
         <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
           <PackageOpen className="w-8 h-8" />
         </div>
@@ -47,7 +47,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4 lg:gap-6">
       {products.map((product) => (
         <ProductCard key={product.id} product={product} />
       ))}

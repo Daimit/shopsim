@@ -136,7 +136,9 @@ export const ProductPage: React.FC = () => {
   }
 
   const breadcrumbs = [
-    { label: 'Products', href: '/' },
+    ...(product.category
+      ? [{ label: product.category.name, href: `/category/${product.category.slug}` }]
+      : [{ label: 'Products', href: '/' }]),
     { label: product.name, href: `/product/${product.slug}` }
   ];
 
