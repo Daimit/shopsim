@@ -538,6 +538,15 @@ export const api = {
     return await handleResponse<User>(res, null as any);
   },
 
+  async getAnalytics(): Promise<any> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/analytics`);
+      return await handleResponse<any>(res, null);
+    } catch {
+      return null;
+    }
+  },
+
   async getDemoUsers(): Promise<DemoAccount[]> {
     try {
       const res = await fetch(`${API_BASE_URL}/auth/demo-users`);

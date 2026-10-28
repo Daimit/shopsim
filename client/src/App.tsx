@@ -17,6 +17,7 @@ import { CheckoutPage } from './pages/CheckoutPage';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/admin/DashboardPage';
 import { SessionDetailPage } from './pages/admin/SessionDetailPage';
+import { AnalyticsPage } from './pages/admin/AnalyticsPage';
 
 export const App: React.FC = () => {
   const loadSession = useAuthStore((state) => state.loadSession);
@@ -46,6 +47,7 @@ export const App: React.FC = () => {
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/admin" element={<DashboardPage />} />
+              <Route path="/admin/analytics" element={<AnalyticsPage />} />
               <Route path="/admin/sessions/:id" element={<SessionDetailPage />} />
             </Routes>
           </main>
