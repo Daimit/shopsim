@@ -1,361 +1,158 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  Activity,
+  ArrowUpRight,
+  CheckCircle2,
+  Clock3,
+  Download,
+  RefreshCw,
+  Search,
+  Users,
+  XCircle,
+} from 'lucide-react';
 import { TestSession } from '../../types';
 import { api } from '../../lib/api';
-import { tracker } from '../../lib/tracker';
-import {
-  Users,
-  CheckCircle2,
-  Clock,
-  Activity,
-  ArrowRight,
-  ShieldCheck,
-  RefreshCw,
-  Shield,
-  LogIn,
-  Download,
-  Search,
-  Filter
-} from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { AdminShell } from '../../components/admin/AdminShell';
+
+const formatDuration = (start: string, end?: string) => {
+  const endTime = end ? new Date(end).getTime() : Date.now();
+  const minutes = Math.max(0, Math.round((endTime - new Date(start).getTime()) / 60000));
+  return `${minutes} min`;
+};
+
+const formatDate = (value: string) => new Date(value).toLocaleDateString([], { month: 'short', day: 'numeric' });
 
 export const DashboardPage: React.FC = () => {
   const [sessions, setSessions] = useState<TestSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'completed' | 'in_progress'>('all');
-  const [deviceFilter, setDeviceFilter] = useState<'all' | 'desktop' | 'mobile'>('all');
-
-  const handleExportSessionsCSV = () => {
-    if (!sessions.length) return;
-    const headers = ['Participant ID', 'Session ID', 'Scenario', 'Screen Size', 'Status', 'Started At', 'Ended At', 'Events'];
-    const rows = sessions.map(s => [
-      `"${s.participantId}"`,
-      `"${s.id}"`,
-      `"${s.scenarioId}"`,
-      `"${s.screenSize || 'N/A'}"`,
-      s.completed ? 'Completed' : 'In Progress',
-      `"${s.startedAt}"`,
-      `"${s.endedAt || 'Active'}"`,
-      s.eventCount || 0,
-    ]);
-    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `shopsim_sessions_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState<'all' | 'completed' | 'active'>('all');
+  const [device, setDevice] = useState<'all' | 'mobile' | 'desktop'>('all');
+  const [page, setPage] = useState(1);
+  const pageSize = 8;
+  const { user, demoLogin } = useAuthStore();
 
   const fetchSessions = async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      const data = await api.getSessions();
-      setSessions(data);
+      setSessions(await api.getSessions());
+    } catch {
+      setError('We could not load participant sessions. Try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    document.title = 'Admin Usability Dashboard - ShopSim';
+    document.title = 'Research OS - Overview';
     fetchSessions();
   }, []);
 
-  const totalSessions = sessions.length;
-  const completedCount = sessions.filter(s => s.completed).length;
-  const completionRate = totalSessions > 0 ? Math.round((completedCount / totalSessions) * 100) : 0;
-  const totalEvents = sessions.reduce((acc, s) => acc + (s.eventCount || 0), 0);
+  const filteredSessions = useMemo(() => sessions.filter((session) => {
+    const query = search.trim().toLowerCase();
+    const matchesSearch = !query || session.participantId.toLowerCase().includes(query) || session.id.toLowerCase().includes(query) || session.scenarioId.toLowerCase().includes(query);
+    const matchesStatus = status === 'all' || (status === 'completed' ? session.completed : !session.completed);
+    const isMobile = session.screenSize?.includes('390') || /mobile|android|iphone/i.test(session.userAgent || '');
+    const matchesDevice = device === 'all' || (device === 'mobile' ? isMobile : !isMobile);
+    return matchesSearch && matchesStatus && matchesDevice;
+  }), [sessions, search, status, device]);
 
-  const formatDuration = (start: string, end?: string) => {
-    const s = new Date(start).getTime();
-    const e = end ? new Date(end).getTime() : Date.now();
-    const mins = Math.max(1, Math.round((e - s) / 60000));
-    return `${mins} min`;
+  const totalPages = Math.max(1, Math.ceil(filteredSessions.length / pageSize));
+  const visibleSessions = filteredSessions.slice((page - 1) * pageSize, page * pageSize);
+  const completed = sessions.filter((session) => session.completed).length;
+  const totalEvents = sessions.reduce((sum, session) => sum + (session.eventCount || 0), 0);
+  const averageDuration = sessions.length
+    ? Math.round(sessions.reduce((sum, session) => sum + (session.endedAt ? (new Date(session.endedAt).getTime() - new Date(session.startedAt).getTime()) / 60000 : 0), 0) / sessions.filter((session) => session.endedAt).length || 0)
+    : 0;
+  const trend = Array.from({ length: 7 }, (_, index) => sessions.filter((session) => new Date(session.startedAt).getDay() === index).length);
+  const maxTrend = Math.max(...trend, 1);
+
+  const exportCsv = () => {
+    if (!sessions.length) return;
+    const rows = sessions.map((session) => [session.participantId, session.id, session.scenarioId, session.screenSize || '', session.completed ? 'Completed' : 'Active', session.eventCount || 0]);
+    const csv = [['Participant', 'Session ID', 'Scenario', 'Screen', 'Status', 'Events'], ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `shopsim-sessions-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
-  const { user, demoLogin } = useAuthStore();
-
   return (
-    <div className="space-y-8 pb-20">
-      {/* Auth Status Notification */}
-      {user?.role === 'admin' ? (
-        <div className="p-3.5 rounded-xl bg-purple-50/70 border border-purple-200 text-purple-900 text-xs flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-purple-600 shrink-0" />
-            <span>
-              Authenticated as Administrator: <strong className="font-bold">{user.name}</strong> ({user.email})
-            </span>
+    <AdminShell>
+      <div className="space-y-6 pb-16">
+        {user?.role !== 'admin' && (
+          <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 sm:flex-row sm:items-center sm:justify-between">
+            <span><strong>Researcher access recommended.</strong> Sign in as an administrator to use the full workspace.</span>
+            <button type="button" onClick={() => demoLogin('admin')} className="rounded-lg bg-purple-600 px-3 py-2 font-bold text-white hover:bg-purple-700">1-click admin login</button>
           </div>
-          <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-purple-200 text-purple-800">
-            Full Privileges
-          </span>
-        </div>
-      ) : (
-        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <Shield className="w-5 h-5 text-amber-600 shrink-0" />
-            <div>
-              <span className="font-bold text-amber-900">Administrator Login Recommended: </span>
-              {user ? (
-                <span>You are currently signed in as a Shopper ({user.name}). Usability admin features are optimized for the Researcher persona.</span>
-              ) : (
-                <span>You are currently browsing as a Guest. Log in as an Administrator for researcher credentials and full controls.</span>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => demoLogin('admin')}
-              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs rounded-lg transition-colors cursor-pointer"
-            >
-              1-Click Admin Login
-            </button>
-            <Link
-              to="/login?role=admin&redirect=/admin"
-              className="px-3 py-1.5 bg-white hover:bg-amber-100 text-amber-900 font-semibold text-xs rounded-lg border border-amber-300 transition-colors"
-            >
-              Go to Login Page
-            </Link>
-          </div>
-        </div>
-      )}
+        )}
 
-      {/* Top Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
-        <div>
-          <div className="flex items-center gap-2 text-blue-600 text-xs font-bold uppercase tracking-wider mb-1">
-            <Activity className="w-4 h-4" />
-            <span>Research Analytics Control Center</span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Usability Sessions Dashboard
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Monitor real-time participant workflows, telemetry events, and funnel completion metrics.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
-          <Link
-            to="/admin/analytics"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors"
-          >
-            <Activity className="w-3.5 h-3.5" />
-            <span>Usability Analytics</span>
-          </Link>
-          <button
-            onClick={handleExportSessionsCSV}
-            disabled={sessions.length === 0}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export CSV</span>
-          </button>
-          <button
-            onClick={fetchSessions}
-            disabled={isLoading}
-            className="inline-flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 shadow-2xs transition-colors"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            <span>Refresh Data</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Test Sessions</span>
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Users className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-slate-900">{totalSessions}</div>
-          <p className="text-[11px] text-slate-500 mt-1">Recorded participant runs</p>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Completion Rate</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <CheckCircle2 className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-emerald-600">{completionRate}%</div>
-          <p className="text-[11px] text-slate-500 mt-1">{completedCount} of {totalSessions} completed</p>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Avg Duration</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-slate-900">8.4 min</div>
-          <p className="text-[11px] text-slate-500 mt-1">Time per scenario run</p>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Telemetry</span>
-            <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
-              <Activity className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-2xl font-black text-slate-900">{totalEvents}</div>
-          <p className="text-[11px] text-slate-500 mt-1">Buffered user interactions</p>
-        </div>
-      </div>
-
-      {/* Test Sessions Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <header className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-base font-bold text-slate-900">Recorded Sessions</h2>
-            <span className="text-xs text-slate-400">Click row to inspect event timeline</span>
+            <p className="mb-1 text-[11px] font-bold uppercase tracking-widest text-blue-600">Usability research</p>
+            <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Overview</h1>
+            <p className="mt-1 text-sm text-slate-500">A clear view of participant activity and study health.</p>
           </div>
+          <div className="flex gap-2">
+            <button type="button" onClick={fetchSessions} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} /> Refresh</button>
+            <button type="button" onClick={exportCsv} disabled={!sessions.length} className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"><Download className="h-3.5 w-3.5" /> Export</button>
+          </div>
+        </header>
 
-          {/* Interactive Filtering Controls */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
-              <input
-                type="text"
-                placeholder="Search participant..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:outline-hidden w-44"
-              />
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Metric label="Total sessions" value={sessions.length} icon={<Users className="h-4 w-4" />} tone="blue" />
+          <Metric label="Completion rate" value={`${sessions.length ? Math.round((completed / sessions.length) * 100) : 0}%`} icon={<CheckCircle2 className="h-4 w-4" />} tone="green" />
+          <Metric label="Avg. duration" value={`${averageDuration} min`} icon={<Clock3 className="h-4 w-4" />} tone="purple" />
+          <Metric label="Total events" value={totalEvents} icon={<Activity className="h-4 w-4" />} tone="orange" />
+        </section>
+
+        <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between"><div><h2 className="text-sm font-bold text-slate-900">Session activity</h2><p className="mt-1 text-xs text-slate-500">Recorded sessions by day of week</p></div><Activity className="h-4 w-4 text-blue-600" /></div>
+            <div className="mt-6 flex h-36 items-end gap-2">
+              {trend.map((count, index) => <div key={index} className="flex flex-1 flex-col items-center gap-2"><div className="w-full rounded-t-md bg-blue-500/80 transition-all" style={{ height: `${Math.max(8, (count / maxTrend) * 100)}%` }} title={`${count} sessions`} /><span className="text-[10px] text-slate-400">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][index]}</span></div>)}
             </div>
+          </section>
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-start justify-between"><div><h2 className="text-sm font-bold text-slate-900">Study health</h2><p className="mt-1 text-xs text-slate-500">Measured from collected sessions</p></div><CheckCircle2 className="h-4 w-4 text-emerald-600" /></div>
+            <div className="mt-5 space-y-4">
+              <HealthRow label="Completed sessions" value={completed} total={sessions.length} color="bg-emerald-500" />
+              <HealthRow label="Active sessions" value={sessions.length - completed} total={sessions.length} color="bg-amber-500" />
+              <HealthRow label="Sessions with events" value={sessions.filter((session) => (session.eventCount || 0) > 0).length} total={sessions.length} color="bg-blue-500" />
+            </div>
+          </section>
+        </div>
 
-            <select
-              value={statusFilter}
-              onChange={(e: any) => setStatusFilter(e.target.value)}
-              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium focus:bg-white focus:outline-hidden"
-            >
-              <option value="all">All Statuses</option>
-              <option value="completed">Completed Only</option>
-              <option value="in_progress">In Progress</option>
-            </select>
-
-            <select
-              value={deviceFilter}
-              onChange={(e: any) => setDeviceFilter(e.target.value)}
-              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 font-medium focus:bg-white focus:outline-hidden"
-            >
-              <option value="all">All Devices</option>
-              <option value="desktop">Desktop (1920x1080)</option>
-              <option value="mobile">Mobile (390x844)</option>
-            </select>
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-slate-100 p-5 lg:flex-row lg:items-center lg:justify-between">
+            <div><h2 className="text-sm font-bold text-slate-900">Sessions & participants</h2><p className="mt-1 text-xs text-slate-500">Search and inspect every recorded participant run.</p></div>
+            <div className="flex flex-wrap gap-2">
+              <div className="relative"><Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" /><input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search sessions..." className="w-48 rounded-lg border border-slate-200 py-2 pl-8 pr-3 text-xs outline-none focus:border-blue-500" /></div>
+              <select value={status} onChange={(event) => { setStatus(event.target.value as typeof status); setPage(1); }} className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-600"><option value="all">All status</option><option value="completed">Completed</option><option value="active">Active</option></select>
+              <select value={device} onChange={(event) => { setDevice(event.target.value as typeof device); setPage(1); }} className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-600"><option value="all">All devices</option><option value="desktop">Desktop</option><option value="mobile">Mobile</option></select>
+            </div>
           </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-100 text-sm">
-            <thead className="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
-              <tr>
-                <th className="py-3.5 px-6 text-left">Participant ID</th>
-                <th className="py-3.5 px-6 text-left">Scenario</th>
-                <th className="py-3.5 px-6 text-left">Started At</th>
-                <th className="py-3.5 px-6 text-left">Duration</th>
-                <th className="py-3.5 px-6 text-left">Status</th>
-                <th className="py-3.5 px-6 text-right">Event Count</th>
-                <th className="py-3.5 px-6 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {(sessions.filter((sess) => {
-                if (searchTerm.trim()) {
-                  const q = searchTerm.toLowerCase();
-                  const matchPart = sess.participantId?.toLowerCase().includes(q);
-                  const matchId = sess.id?.toLowerCase().includes(q);
-                  if (!matchPart && !matchId) return false;
-                }
-                if (statusFilter === 'completed' && !sess.completed) return false;
-                if (statusFilter === 'in_progress' && sess.completed) return false;
-                if (deviceFilter === 'mobile' && !sess.screenSize?.includes('390')) return false;
-                if (deviceFilter === 'desktop' && sess.screenSize?.includes('390')) return false;
-                return true;
-              })).map((sess) => {
-                const isCurrent = sess.id === tracker.getSessionId();
-                return (
-                  <tr
-                    key={sess.id}
-                    className={`hover:bg-blue-50/40 transition-colors cursor-pointer ${
-                      isCurrent ? 'bg-blue-50/20' : ''
-                    }`}
-                  >
-                    <td className="py-4 px-6 font-bold text-slate-800">
-                      <div className="flex items-center gap-2">
-                        <span>{sess.participantId}</span>
-                        {isCurrent && (
-                          <span className="bg-blue-100 text-blue-700 text-[10px] font-extrabold px-1.5 py-0.5 rounded">
-                            CURRENT
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-[11px] font-mono text-slate-400 block">{sess.id}</span>
-                    </td>
-
-                    <td className="py-4 px-6 text-slate-600 font-medium text-xs">
-                      {sess.scenarioId}
-                    </td>
-
-                    <td className="py-4 px-6 text-slate-500 text-xs">
-                      {new Date(sess.startedAt).toLocaleString([], {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </td>
-
-                    <td className="py-4 px-6 text-slate-600 text-xs font-medium">
-                      {formatDuration(sess.startedAt, sess.endedAt)}
-                    </td>
-
-                    <td className="py-4 px-6">
-                      {sess.completed ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Completed</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
-                          <Clock className="w-3.5 h-3.5" />
-                          <span>In Progress</span>
-                        </span>
-                      )}
-                    </td>
-
-                    <td className="py-4 px-6 text-right font-mono font-bold text-slate-800">
-                      {sess.eventCount || 24}
-                    </td>
-
-                    <td className="py-4 px-6 text-right">
-                      <Link
-                        to={`/admin/sessions/${sess.id}`}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline"
-                        data-track={`admin_inspect_sess_${sess.id}`}
-                      >
-                        <span>Details</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+          {error && <div className="m-5 rounded-lg bg-red-50 p-3 text-xs text-red-700">{error}</div>}
+          {isLoading ? <div className="p-12 text-center text-xs text-slate-500">Loading participant sessions…</div> : !visibleSessions.length ? <div className="p-12 text-center"><XCircle className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-2 text-sm font-bold text-slate-700">No sessions found</p><p className="mt-1 text-xs text-slate-500">Try changing the filters or collect a participant session first.</p></div> : (
+            <div className="overflow-x-auto"><table className="min-w-[760px] w-full text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase tracking-widest text-slate-400"><tr><th className="px-5 py-3">Participant</th><th className="px-5 py-3">Scenario</th><th className="px-5 py-3">Started</th><th className="px-5 py-3">Duration</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Events</th><th className="px-5 py-3" /></tr></thead><tbody className="divide-y divide-slate-100">{visibleSessions.map((session) => <tr key={session.id} className="hover:bg-blue-50/30"><td className="px-5 py-4"><p className="font-bold text-slate-800">{session.participantId}</p><p className="mt-1 font-mono text-[10px] text-slate-400">{session.id.slice(0, 12)}…</p></td><td className="px-5 py-4 text-slate-600">{session.scenarioId}</td><td className="px-5 py-4 text-slate-500">{formatDate(session.startedAt)}</td><td className="px-5 py-4 text-slate-600">{formatDuration(session.startedAt, session.endedAt)}</td><td className="px-5 py-4">{session.completed ? <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 font-bold text-emerald-700"><CheckCircle2 className="h-3 w-3" /> Completed</span> : <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 font-bold text-amber-700"><Clock3 className="h-3 w-3" /> Active</span>}</td><td className="px-5 py-4 text-right font-mono font-bold text-slate-700">{session.eventCount || 0}</td><td className="px-5 py-4 text-right"><Link to={`/admin/sessions/${session.id}`} className="inline-flex items-center gap-1 font-bold text-blue-600 hover:text-blue-800">Inspect <ArrowUpRight className="h-3 w-3" /></Link></td></tr>)}</tbody></table></div>
+          )}
+          <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3 text-xs text-slate-500"><span>{filteredSessions.length} sessions</span><div className="flex items-center gap-2"><button type="button" disabled={page === 1} onClick={() => setPage((value) => value - 1)} className="rounded-md border border-slate-200 px-2 py-1 disabled:opacity-40">Previous</button><span>Page {page} / {totalPages}</span><button type="button" disabled={page === totalPages} onClick={() => setPage((value) => value + 1)} className="rounded-md border border-slate-200 px-2 py-1 disabled:opacity-40">Next</button></div></div>
+        </section>
       </div>
-    </div>
+    </AdminShell>
   );
 };
+
+const Metric: React.FC<{ label: string; value: string | number; icon: React.ReactNode; tone: 'blue' | 'green' | 'purple' | 'orange' }> = ({ label, value, icon, tone }) => (
+  <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</span><span className={`rounded-lg p-2 ${tone === 'blue' ? 'bg-blue-50 text-blue-600' : tone === 'green' ? 'bg-emerald-50 text-emerald-600' : tone === 'purple' ? 'bg-purple-50 text-purple-600' : 'bg-orange-50 text-orange-600'}`}>{icon}</span></div><p className="mt-4 text-2xl font-black tracking-tight text-slate-950">{value}</p><p className="mt-1 text-[11px] text-slate-500">Based on collected data</p></div>
+);
+
+const HealthRow: React.FC<{ label: string; value: number; total: number; color: string }> = ({ label, value, total, color }) => (
+  <div><div className="mb-1.5 flex justify-between text-xs"><span className="text-slate-600">{label}</span><strong className="text-slate-900">{value}</strong></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${color}`} style={{ width: `${total ? (value / total) * 100 : 0}%` }} /></div></div>
+);

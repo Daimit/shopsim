@@ -345,16 +345,7 @@ router.get('/analytics', async (_req: Request, res: Response, next: NextFunction
       }
     }
 
-    const susScores: Record<string, number> = {
-      P_101: 90.0,
-      P_102: 57.5,
-      P_103: 80.0,
-      P_104: 55.0,
-      P_105: 72.5,
-      P_106: 67.5,
-      P_107: 60.0,
-      P_108: 85.0,
-    };
+    const susScores: Record<string, number> = {};
 
     const participantSummaries = sessions.map((s) => {
       const duration = s.endedAt
@@ -366,7 +357,7 @@ router.get('/analytics', async (_req: Request, res: Response, next: NextFunction
         ['error', 'form_error', 'checkout_error', 'cart_error', 'coupon_error'].includes(e.eventType)
       ).length;
       const backtracks = s.events.filter((e) => e.eventType === 'navigation_back').length;
-      const susScore = susScores[s.participantId] || 70.0;
+      const susScore = susScores[s.participantId] ?? null;
 
       return {
         participantId: s.participantId,
@@ -387,7 +378,7 @@ router.get('/analytics', async (_req: Request, res: Response, next: NextFunction
     const susValues = Object.values(susScores);
     const avgSUS = susValues.length > 0
       ? Math.round((susValues.reduce((a, b) => a + b, 0) / susValues.length) * 10) / 10
-      : 70.0;
+      : null;
 
     const completedSessions = sessions.filter((s) => s.completed).length;
 

@@ -15,7 +15,16 @@ import {
   ShoppingBag,
   CreditCard,
   MapPin,
-  Calendar
+  Calendar,
+  Grid2X2,
+  Heart,
+  MapPinned,
+  WalletCards,
+  Settings,
+  LogOut,
+  MessageCircle,
+  ChevronDown,
+  Printer
 } from 'lucide-react';
 import { Breadcrumb } from '../components/layout/Breadcrumb';
 
@@ -52,7 +61,7 @@ interface OrderRecord {
 }
 
 export const OrdersPage: React.FC = () => {
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const { addItem } = useCartStore();
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,33 +131,63 @@ export const OrdersPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 pb-20 max-w-5xl mx-auto">
+    <div className="space-y-5 pb-20 max-w-7xl mx-auto">
       <Breadcrumb
         items={[
           { label: 'My Account' },
-          { label: 'Orders' },
+          { label: 'My Orders & Tracking' },
         ]}
       />
 
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+      <section className="rounded-2xl bg-blue-50 px-5 py-5 sm:px-7 sm:py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
-            <Package className="w-7 h-7 text-blue-600" />
-            <span>My Orders & Package Tracking</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Track active shipments, download invoices, and review previous order receipts.
-          </p>
+          <p className="text-[11px] font-semibold text-blue-600">Welcome back, {user?.name?.split(' ')[0] || 'Shopper'}.</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mt-1">My Orders & Tracking</h1>
+          <p className="text-xs text-slate-500 mt-1">Your delivery updates, all in one place. Track, revisit, and reorder your favorites.</p>
         </div>
+        <span className="inline-flex items-center gap-1.5 self-start sm:self-center rounded-full bg-white px-3 py-2 text-[11px] font-bold text-emerald-700 shadow-xs">
+          <CheckCircle2 className="w-3.5 h-3.5" />
+          Delivered orders
+        </span>
+      </section>
 
-        {user && (
-          <div className="flex items-center gap-2 bg-slate-100 px-3.5 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-700">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            <span>Signed in as <strong className="text-slate-900">{user.name}</strong></span>
+      <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)] items-start">
+        <aside className="space-y-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+            <div className="px-1 pb-4 border-b border-slate-100">
+              <p className="font-bold text-slate-900">{user?.name || 'Shopper'}</p>
+              <p className="text-[11px] text-slate-500 mt-1 truncate">{user?.email || 'shopper@shopsim.test'}</p>
+            </div>
+            <nav className="pt-3 space-y-1 text-xs font-semibold">
+              <Link to="/account" className="flex items-center gap-3 rounded-xl px-3 py-3 text-slate-600 hover:bg-slate-50"><Grid2X2 className="w-4 h-4 text-slate-400" /> Account overview</Link>
+              <Link to="/orders" className="flex items-center gap-3 rounded-xl bg-blue-50 px-3 py-3 text-blue-600"><Package className="w-4 h-4" /> Orders & tracking</Link>
+              <Link to="/account/saved" className="flex items-center gap-3 rounded-xl px-3 py-3 text-slate-600 hover:bg-slate-50"><Heart className="w-4 h-4 text-slate-400" /> Saved items</Link>
+              <Link to="/account/addresses" className="flex items-center gap-3 rounded-xl px-3 py-3 text-slate-600 hover:bg-slate-50"><MapPinned className="w-4 h-4 text-slate-400" /> Addresses</Link>
+              <Link to="/account/payments" className="flex items-center gap-3 rounded-xl px-3 py-3 text-slate-600 hover:bg-slate-50"><WalletCards className="w-4 h-4 text-slate-400" /> Payment methods</Link>
+              <Link to="/account/settings" className="flex items-center gap-3 rounded-xl px-3 py-3 text-slate-600 hover:bg-slate-50"><Settings className="w-4 h-4 text-slate-400" /> Account settings</Link>
+              <div className="border-t border-slate-100 pt-2 mt-2">
+                <button type="button" onClick={logout} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-slate-500 hover:bg-slate-50 text-left"><LogOut className="w-4 h-4" /> Sign out</button>
+              </div>
+            </nav>
           </div>
-        )}
-      </div>
+          <div className="rounded-2xl bg-slate-100 p-4">
+            <MessageCircle className="w-5 h-5 text-blue-600 mb-3" />
+            <p className="text-xs font-bold text-slate-800">Need a little help?</p>
+            <p className="text-[11px] text-slate-500 mt-1">Questions about an order or a return? We’re here for you.</p>
+            <Link to="/" className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 mt-3">Contact support <ArrowRight className="w-3 h-3" /></Link>
+          </div>
+        </aside>
+
+        <section className="min-w-0 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Your delivered orders</h2>
+              <p className="text-[11px] text-slate-500 mt-1">{orders.length} orders • {orders.reduce((sum, order) => sum + ((order.items || order.shippingData?.items || []).length), 0)} items, thoughtfully chosen.</p>
+            </div>
+            <button type="button" className="inline-flex items-center justify-between gap-5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-600 shadow-xs">
+              Last 3 months <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+          </div>
 
       {isLoading ? (
         <div className="py-16 text-center space-y-3">
@@ -359,6 +398,7 @@ export const OrdersPage: React.FC = () => {
                     }}
                     className="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
                   >
+                    <Printer className="w-3.5 h-3.5 inline mr-1" />
                     Print Invoice
                   </button>
                 </div>
@@ -367,6 +407,8 @@ export const OrdersPage: React.FC = () => {
           })}
         </div>
       )}
+        </section>
+      </div>
     </div>
   );
 };

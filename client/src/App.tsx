@@ -18,10 +18,12 @@ import { ComparePage } from './pages/ComparePage';
 import { CartPage } from './pages/CartPage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { OrdersPage } from './pages/OrdersPage';
+import { AccountSectionPage } from './pages/AccountSectionPage';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/admin/DashboardPage';
 import { SessionDetailPage } from './pages/admin/SessionDetailPage';
 import { AnalyticsPage } from './pages/admin/AnalyticsPage';
+import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
 
 export const App: React.FC = () => {
   const loadSession = useAuthStore((state) => state.loadSession);
@@ -59,12 +61,33 @@ export const App: React.FC = () => {
               <Route path="/cart" element={<CartPage />} />
               <Route path="/checkout" element={<CheckoutPage />} />
               <Route path="/orders" element={<OrdersPage />} />
+              <Route path="/account" element={<AccountSectionPage section="overview" />} />
+              <Route path="/account/saved" element={<AccountSectionPage section="saved" />} />
+              <Route path="/account/addresses" element={<AccountSectionPage section="addresses" />} />
+              <Route path="/account/payments" element={<AccountSectionPage section="payments" />} />
+              <Route path="/account/settings" element={<AccountSectionPage section="settings" />} />
               <Route path="/login" element={<LoginPage />} />
               <Route
                 path="/admin"
                 element={
                   <AdminRouteGuard>
                     <DashboardPage />
+                  </AdminRouteGuard>
+                }
+              />
+              <Route
+                path="/admin/sessions"
+                element={
+                  <AdminRouteGuard>
+                    <DashboardPage />
+                  </AdminRouteGuard>
+                }
+              />
+              <Route
+                path="/admin/settings"
+                element={
+                  <AdminRouteGuard>
+                    <AdminSettingsPage />
                   </AdminRouteGuard>
                 }
               />

@@ -5,6 +5,7 @@ import { Product } from '../../types';
 import { RatingStars } from './RatingStars';
 import { useCartStore } from '../../store/cartStore';
 import { useAuthStore } from '../../store/authStore';
+import { useFavoriteStore } from '../../store/favoriteStore';
 
 interface ProductCardProps {
   product: Product;
@@ -16,7 +17,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const openAuthModal = useAuthStore((state) => state.openAuthModal);
   const [isAdding, setIsAdding] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
+  const isLiked = useFavoriteStore((state) => state.isFavorite(product.id));
+  const toggleFavorite = useFavoriteStore((state) => state.toggleItem);
 
   const isOutOfStock = product.stock <= 0;
 
@@ -125,10 +127,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            setIsLiked(!isLiked);
+            toggleFavorite(product);
           }}
           className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/90 border border-slate-200/80 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-white shadow-2xs transition-colors"
-          aria-label="Wishlist"
+          aria-label={isLiked ? `Remove ${product.name} from saved items` : `Save ${product.name}`}
+          data-track={`favorite_toggle_${product.id}`}
         >
           <Heart className={`w-4 h-4 ${isLiked ? 'fill-rose-500 text-rose-500' : ''}`} />
         </button>

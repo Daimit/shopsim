@@ -7,12 +7,25 @@ import { useCartStore } from '../../store/cartStore';
 import { useAuthStore } from '../../store/authStore';
 import { Trash2, ShoppingCart, Check, Scale } from 'lucide-react';
 
+const getSpecValue = (product: Product, specKey: string): string => {
+  try {
+    const parsed = typeof product.specs === 'string' ? JSON.parse(product.specs) : product.specs;
+    if (parsed && parsed[specKey] !== undefined) {
+      return String(parsed[specKey]);
+    }
+  } catch {
+    // Treat malformed or missing specifications as unavailable.
+  }
+  return '—';
+};
+
 export const ComparisonTable: React.FC = () => {
   const { items, removeItem, clearCompare } = useCompareStore();
   const addItem = useCartStore((state) => state.addItem);
   const user = useAuthStore((state) => state.user);
   const openAuthModal = useAuthStore((state) => state.openAuthModal);
   const [addedMap, setAddedMap] = React.useState<Record<number, boolean>>({});
+  const [highlightDifferences, setHighlightDifferences] = React.useState(false);
 
   if (items.length === 0) {
     return (
@@ -78,14 +91,35 @@ export const ComparisonTable: React.FC = () => {
         <p className="text-sm text-slate-500">
           Comparing <strong className="text-slate-800">{items.length}</strong> {items.length === 1 ? 'product' : 'products'} (maximum 4)
         </p>
-        <button
-          onClick={clearCompare}
-          className="text-xs text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1 font-medium"
-          data-track="compare_clear_all"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-          <span>Clear comparison</span>
-        </button>
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer">
+            <span>Highlight differences</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={highlightDifferences}
+              onClick={() => setHighlightDifferences((enabled) => !enabled)}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                highlightDifferences ? 'bg-blue-600' : 'bg-slate-300'
+              }`}
+              data-track="compare_highlight_differences"
+            >
+              <span
+                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform ${
+                  highlightDifferences ? 'translate-x-4' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </label>
+          <button
+            onClick={clearCompare}
+            className="text-xs text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1 font-medium"
+            data-track="compare_clear_all"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            <span>Clear comparison</span>
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto border border-slate-200 rounded-xl bg-white shadow-xs">
@@ -234,19 +268,23 @@ export const ComparisonTable: React.FC = () => {
                   {specKey}
                 </td>
                 {items.map((prod) => {
-                  let val = '—';
-                  try {
-                    const parsed = typeof prod.specs === 'string' ? JSON.parse(prod.specs) : prod.specs;
-                    if (parsed && parsed[specKey] !== undefined) {
-                      val = String(parsed[specKey]);
-                    }
-                  } catch {
-                    val = '—';
-                  }
+                  const val = getSpecValue(prod, specKey);
+                  const matchingValues = items.filter(
+                    (item) => getSpecValue(item, specKey) === val
+                  ).length;
+                  const isDifferent = matchingValues === 1;
 
                   return (
-                    <td key={prod.id} className="p-4 text-xs text-slate-600 border-l border-slate-100 align-top">
+                    <td
+                      key={prod.id}
+                      className={`p-4 text-xs text-slate-600 border-l border-slate-100 align-top ${
+                        highlightDifferences && isDifferent ? 'bg-emerald-50 text-emerald-800 font-medium' : ''
+                      }`}
+                    >
                       {val}
+                      {highlightDifferences && isDifferent && (
+                        <Check className="inline-block w-3.5 h-3.5 ml-1 text-emerald-600 align-text-bottom" />
+                      )}
                     </td>
                   );
                 })}

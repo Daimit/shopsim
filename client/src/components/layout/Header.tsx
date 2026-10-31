@@ -15,7 +15,8 @@ import {
   ArrowRight,
   ArrowUpRight,
   X,
-  Menu
+  Menu,
+  Heart
 } from 'lucide-react';
 import { useCartStore } from '../../store/cartStore';
 import { useCompareStore } from '../../store/compareStore';
@@ -149,6 +150,22 @@ export const Header: React.FC = () => {
             </Link>
 
             {/* Desktop Navigation Links */}
+            {isMobileNavOpen && (
+              <div className="absolute top-full left-0 w-full bg-white border-t border-slate-200 shadow-lg md:hidden">
+                <nav className="flex flex-col p-4 space-y-2">
+                  <Link to="/" className="text-slate-700 hover:text-blue-600" onClick={() => setIsMobileNavOpen(false)}>Home</Link>
+                  <Link to="/compare" className="text-slate-700 hover:text-blue-600" onClick={() => setIsMobileNavOpen(false)}>Compare</Link>
+                  {user?.role === 'admin' && (
+                    <Link to="/admin" className="text-purple-700 hover:text-purple-600" onClick={() => setIsMobileNavOpen(false)}>Admin Dashboard</Link>
+                  )}
+                  {user ? (
+                    <button onClick={() => { logout(); setIsMobileNavOpen(false); }} className="text-rose-600 hover:text-rose-800 text-left">Sign Out</button>
+                  ) : (
+                    <Link to="/login" className="text-blue-600 hover:text-blue-800" onClick={() => setIsMobileNavOpen(false)}>Sign In</Link>
+                  )}
+                </nav>
+              </div>
+            )}
             <nav className="hidden md:flex items-center gap-1 text-sm font-medium text-slate-700">
               {/* Categories Dropdown */}
               <div className="relative" ref={dropdownRef}>
@@ -381,6 +398,16 @@ export const Header: React.FC = () => {
                 </div>
               )}
             </div>
+
+            <Link
+              to="/account/saved"
+              className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-xs transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+              aria-label="View saved items"
+              data-track="header_saved_items"
+            >
+              <Heart className="h-4 w-4" />
+              <span className="hidden sm:inline">Saved</span>
+            </Link>
 
             {/* Figma-Style Dark Pill Cart Button */}
             <Link
