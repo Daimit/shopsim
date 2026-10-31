@@ -390,7 +390,7 @@ export const Header: React.FC = () => {
               <ShoppingBag className="w-4 h-4 text-white" />
               <span>Cart</span>
               <span className="w-4 h-4 rounded-full bg-white text-slate-900 font-black text-[10px] flex items-center justify-center shrink-0">
-                {cart.itemCount || 3}
+                {cart.itemCount}
               </span>
             </Link>
           </div>
