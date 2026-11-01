@@ -1,6 +1,21 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useCartStore } from '../../store/cartStore';
-import { Tag, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { Tag, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
+
+interface DiscountOffer {
+  code: string;
+  title: string;
+  description: string;
+  requirement: string;
+  accent: string;
+}
+
+const offerAccentClasses: Record<string, string> = {
+  blue: 'text-blue-600',
+  violet: 'text-violet-600',
+  rose: 'text-rose-600',
+  emerald: 'text-emerald-600',
+};
 
 export const DiscountInput: React.FC = () => {
   const { cart, applyDiscount, removeDiscount } = useCartStore();
@@ -8,10 +23,52 @@ export const DiscountInput: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [offersOpen, setOffersOpen] = useState(false);
 
-  const handleApply = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanCode = code.trim().toUpperCase();
+  const offers = useMemo<DiscountOffer[]>(() => {
+    const offers: DiscountOffer[] = [
+      {
+        code: 'SAVE20',
+        title: '20% off your order',
+        description: 'Save 20% on any products in your cart.',
+        requirement: 'No minimum spend',
+        accent: 'blue',
+      },
+    ];
+
+    if (cart.subtotal >= 50) {
+      offers.push({
+        code: 'WELCOME10',
+        title: '$10 off your order',
+        description: 'Take $10 off this purchase.',
+        requirement: 'Eligible on orders $50+',
+        accent: 'violet',
+      });
+    }
+
+    if (cart.subtotal >= 100) {
+      offers.push({
+        code: 'HALF50',
+        title: '50% off your order',
+        description: 'Get an extra 50% off this higher-value cart.',
+        requirement: 'Eligible on orders $100+',
+        accent: 'rose',
+      });
+    }
+
+    offers.push({
+      code: 'FREESHIP',
+      title: 'Free express delivery',
+      description: 'Keep more of your budget with free shipping.',
+      requirement: 'Available on every order',
+      accent: 'emerald',
+    });
+
+    return offers;
+  }, [cart.subtotal]);
+
+  const applyCode = async (value: string) => {
+    const cleanCode = value.trim().toUpperCase();
     if (!cleanCode) return;
 
     setIsSubmitting(true);
@@ -29,6 +86,16 @@ export const DiscountInput: React.FC = () => {
       setIsError(true);
       setStatusMessage(result.message || 'Invalid discount code');
     }
+  };
+
+  const handleApply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await applyCode(code);
+  };
+
+  const handleOfferApply = async (offer: DiscountOffer) => {
+    setCode(offer.code);
+    await applyCode(offer.code);
   };
 
   const handleRemove = async () => {
@@ -110,6 +177,62 @@ export const DiscountInput: React.FC = () => {
           <span>{statusMessage}</span>
         </div>
       )}
+
+      <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/50 p-3.5">
+        <button
+          type="button"
+          onClick={() => setOffersOpen((open) => !open)}
+          className="flex w-full items-center justify-between gap-2 text-left"
+          aria-expanded={offersOpen}
+          data-track="toggle_available_discounts"
+        >
+          <span className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-blue-600" />
+            <span>
+              <span className="block text-xs font-bold text-slate-800">Available discounts & offers</span>
+              <span className="block text-[11px] text-slate-500">
+                {offersOpen ? `Offers for your $${cart.subtotal.toFixed(2)} cart` : 'Click to view available offers'}
+              </span>
+            </span>
+          </span>
+          <span className="text-xs font-bold text-blue-600">
+            {offersOpen ? 'Hide' : 'View'}
+          </span>
+        </button>
+
+        {offersOpen && (
+          <div className="mt-3 space-y-2">
+            {offers.map((offer) => (
+              <div
+                key={offer.code}
+                className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-2.5"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-slate-700">
+                      {offer.code}
+                    </span>
+                    <p className="truncate text-xs font-bold text-slate-800">{offer.title}</p>
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-slate-500">{offer.description}</p>
+                  <p className={`mt-1 text-[10px] font-semibold ${offerAccentClasses[offer.accent]}`}>
+                    {offer.requirement}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleOfferApply(offer)}
+                  disabled={isSubmitting}
+                  className="shrink-0 rounded-md bg-slate-800 px-2.5 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-slate-900 disabled:opacity-50"
+                  data-track={`apply_offer_${offer.code.toLowerCase()}`}
+                >
+                  Apply
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -25,6 +25,7 @@ export const Footer: React.FC = () => {
             <Link to="/shipping" className="hover:text-blue-600 transition-colors">Shipping & returns</Link>
             <Link to="/orders" className="hover:text-blue-600 transition-colors">Help center</Link>
             <Link to="/contact" className="hover:text-blue-600 transition-colors">Contact us</Link>
+            <Link to="/feedback" className="font-bold text-emerald-700 hover:text-emerald-800 transition-colors">Share feedback</Link>
           </nav>
 
           {/* Secure checkout badge */}

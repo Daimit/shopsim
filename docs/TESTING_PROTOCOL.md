@@ -93,8 +93,8 @@ The interactive application features a persistent **Task Banner** (`?task=1..5`)
 ### Scenario 5 (Task 5): Multi-Step Checkout Wizard
 - **Task Goal:** Complete multi-step shipping, delivery, and simulated payment workflows without error.
 - **Prompt Given to User:** *"Proceed through checkout. Fill in any valid simulated shipping address, select delivery, choose payment, and complete the order."*
-- **Optimal Path:** Checkout $\rightarrow$ Step 1 (Shipping Form) $\rightarrow$ Next $\rightarrow$ Step 2 (Delivery Method) $\rightarrow$ Next $\rightarrow$ Step 3 (Payment Form) $\rightarrow$ Next $\rightarrow$ Step 4 (Review) $\rightarrow$ Place Order $\rightarrow$ Order Confirmed.
-- **Optimal Metrics:** 4 wizard steps, 14 form fields, $< 140$ seconds.
+- **Optimal Path:** Checkout $\rightarrow$ Step 1 (Shipping Form) $\rightarrow$ Next $\rightarrow$ Step 2 (Payment Form) $\rightarrow$ Next $\rightarrow$ Step 3 (Review) $\rightarrow$ Place Order $\rightarrow$ Confirmation $\rightarrow$ Post-test Feedback.
+- **Optimal Metrics:** 3 input wizard steps, 14 form fields, $< 140$ seconds.
 - **Key Observation Point:** Field validation error recovery, step indicator progress, and form persistence upon back navigation.
 
 ---

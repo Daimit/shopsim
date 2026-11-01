@@ -54,6 +54,83 @@ interface ParticipantProfile {
   events: EventDef[];
 }
 
+const SYNTHETIC_FEEDBACK: Record<string, {
+  responses: number[];
+  ageRange: string;
+  shoppingFrequency: string;
+  technicalComfort: number;
+  deviceType: string;
+  effortlessPart: string;
+  hesitationPoint: string;
+  checkoutComparison: string;
+  suggestedChange: string;
+}> = {
+  P_101: {
+    responses: [5, 1, 5, 1, 5, 1, 5, 2, 4, 3],
+    ageRange: '25-34', shoppingFrequency: 'Daily', technicalComfort: 5, deviceType: 'Desktop',
+    effortlessPart: 'Search and product comparison were quick and clear.',
+    hesitationPoint: 'I briefly checked the cart total before checkout.',
+    checkoutComparison: 'More guided than most online stores.',
+    suggestedChange: 'Keep the compact layout and add keyboard shortcuts.',
+  },
+  P_102: {
+    responses: [4, 2, 4, 3, 3, 3, 3, 3, 3, 3],
+    ageRange: '55+', shoppingFrequency: 'Monthly', technicalComfort: 2, deviceType: 'Laptop',
+    effortlessPart: 'The product cards made it easy to understand the choices.',
+    hesitationPoint: 'Payment fields and the discount code were not immediately obvious.',
+    checkoutComparison: 'It felt more detailed than the stores I usually use.',
+    suggestedChange: 'Add clearer examples beside payment and coupon fields.',
+  },
+  P_103: {
+    responses: [5, 1, 4, 2, 4, 2, 4, 2, 4, 2],
+    ageRange: '25-34', shoppingFrequency: 'Weekly', technicalComfort: 4, deviceType: 'Desktop',
+    effortlessPart: 'The side-by-side comparison table supported my decision.',
+    hesitationPoint: 'I had to look twice to find the comparison tray.',
+    checkoutComparison: 'Comparable to a modern research shopping prototype.',
+    suggestedChange: 'Make comparison status more prominent after adding a product.',
+  },
+  P_104: {
+    responses: [4, 2, 3, 3, 3, 3, 3, 3, 3, 3],
+    ageRange: '18-24', shoppingFrequency: 'Weekly', technicalComfort: 3, deviceType: 'Laptop',
+    effortlessPart: 'Adding a product to the cart was straightforward.',
+    hesitationPoint: 'I was unsure whether the checkout step had saved my inputs.',
+    checkoutComparison: 'The flow was familiar but had more confirmation screens.',
+    suggestedChange: 'Show a stronger progress indicator and saved-state message.',
+  },
+  P_105: {
+    responses: [5, 1, 4, 2, 4, 3, 4, 2, 3, 3],
+    ageRange: '35-44', shoppingFrequency: 'Weekly', technicalComfort: 3, deviceType: 'Desktop',
+    effortlessPart: 'The available discount offers helped me choose a code.',
+    hesitationPoint: 'I wanted clearer feedback after applying the coupon.',
+    checkoutComparison: 'Similar to other stores, with better research prompts.',
+    suggestedChange: 'Show the amount saved beside the applied code immediately.',
+  },
+  P_106: {
+    responses: [4, 1, 4, 2, 4, 3, 4, 3, 3, 3],
+    ageRange: '18-24', shoppingFrequency: 'Daily', technicalComfort: 5, deviceType: 'Mobile',
+    effortlessPart: 'Search was fast and the product images were useful.',
+    hesitationPoint: 'Some controls felt small on a mobile screen.',
+    checkoutComparison: 'The steps were familiar but slightly dense on mobile.',
+    suggestedChange: 'Increase touch target sizes and reduce form density.',
+  },
+  P_107: {
+    responses: [4, 2, 4, 2, 3, 3, 3, 3, 3, 3],
+    ageRange: '45-54', shoppingFrequency: 'Monthly', technicalComfort: 2, deviceType: 'Laptop',
+    effortlessPart: 'The back links helped me recover from wrong turns.',
+    hesitationPoint: 'I was uncertain where to return after comparing products.',
+    checkoutComparison: 'The simulator provided more guidance than usual.',
+    suggestedChange: 'Keep navigation breadcrumbs visible throughout checkout.',
+  },
+  P_108: {
+    responses: [5, 1, 5, 1, 4, 2, 4, 2, 4, 2],
+    ageRange: '25-34', shoppingFrequency: 'Weekly', technicalComfort: 4, deviceType: 'Desktop',
+    effortlessPart: 'The complete search-to-cart workflow was efficient.',
+    hesitationPoint: 'The review step could expose the final discount breakdown sooner.',
+    checkoutComparison: 'Faster than a typical shopping checkout.',
+    suggestedChange: 'Add a final compact summary of all applied adjustments.',
+  },
+};
+
 // ────────────────────────────────────────────────────────────────────
 // Participant definitions
 // ────────────────────────────────────────────────────────────────────
@@ -937,6 +1014,37 @@ async function main() {
     });
     totalTasks += createdTasks.count;
     console.log(`   ✅ ${createdTasks.count} task progress records created`);
+
+    const feedback = SYNTHETIC_FEEDBACK[p.participantId];
+    if (feedback) {
+      const susScore = feedback.responses.reduce(
+        (sum, response, index) => sum + (index % 2 === 0 ? response - 1 : 5 - response),
+        0,
+      ) * 2.5;
+
+      await prisma.participantDemographics.create({
+        data: {
+          sessionId,
+          ageRange: feedback.ageRange,
+          shoppingFrequency: feedback.shoppingFrequency,
+          technicalComfort: feedback.technicalComfort,
+          deviceType: feedback.deviceType,
+        },
+      });
+
+      await prisma.postTestFeedback.create({
+        data: {
+          sessionId,
+          susResponses: JSON.stringify(feedback.responses),
+          susScore,
+          effortlessPart: feedback.effortlessPart,
+          hesitationPoint: feedback.hesitationPoint,
+          checkoutComparison: feedback.checkoutComparison,
+          suggestedChange: feedback.suggestedChange,
+        },
+      });
+      console.log(`   ✅ Synthetic post-test feedback created (SUS ${susScore})`);
+    }
   }
 
   // ── Summary ─────────────────────────────────────────────────

@@ -16,6 +16,7 @@ A controlled e-commerce web application designed for studying user behaviour dur
 - **Interaction Logging** — Every user action is tracked with timestamps and metadata
 - **Task System** — Predefined usability test tasks with progress tracking
 - **Researcher Dashboard** — View sessions, events, metrics, and export data
+- **Post-Test Feedback** — Collect SUS responses, participant profile data, and debrief feedback per session
 
 ## 🛠 Tech Stack
 
@@ -72,6 +73,17 @@ cd client && npx vite
 ```
 
 Then open **http://localhost:5173** in your browser.
+
+### Seed evaluation participant feedback
+
+To populate the researcher dashboard with the reproducible eight-participant evaluation fixture, run:
+
+```bash
+cd server
+npm run db:seed-participants
+```
+
+The seeded SUS scores and debrief responses are synthetic demonstration data and should not be presented as real participant responses.
 
 ## 📁 Project Structure
 
@@ -147,6 +159,8 @@ ecommerce-usability-simulator/
 | POST | `/api/events` | Batch submit events |
 | POST | `/api/sessions` | Start test session |
 | PATCH | `/api/sessions/:id` | Update/end session |
+| POST | `/api/sessions/:id/feedback` | Save SUS, demographics, and debrief feedback |
+| GET | `/api/sessions/:id/feedback` | Retrieve session feedback |
 
 ### Researcher Dashboard
 | Method | Endpoint | Description |

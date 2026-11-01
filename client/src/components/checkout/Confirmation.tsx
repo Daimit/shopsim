@@ -64,6 +64,15 @@ export const Confirmation: React.FC<ConfirmationProps> = ({ order }) => {
       {/* Button */}
       <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
         <Link
+          to="/feedback"
+          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-xl shadow-xs transition-colors"
+          data-track="confirmation_feedback"
+        >
+          <span>Share Feedback</span>
+          <ArrowRight className="w-4 h-4" />
+        </Link>
+
+        <Link
           to="/"
           className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm rounded-xl shadow-xs transition-colors"
           data-track="confirmation_continue_shopping"

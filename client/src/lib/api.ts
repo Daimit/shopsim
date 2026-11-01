@@ -9,7 +9,8 @@ import {
   ProductFilters,
   User,
   AuthResponse,
-  DemoAccount
+  DemoAccount,
+  ResearchFeedback
 } from '../types';
 
 const API_BASE_URL = '/api';
@@ -562,6 +563,15 @@ export const api = {
     }
   },
 
+  async submitFeedback(sessionId: string, feedback: ResearchFeedback): Promise<{ susScore: number }> {
+    const res = await fetch(`${API_BASE_URL}/sessions/${encodeURIComponent(sessionId)}/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(feedback),
+    });
+    return await handleResponse<{ susScore: number }>(res, { susScore: 0 });
+  },
+
   async getDemoUsers(): Promise<DemoAccount[]> {
     try {
       const res = await fetch(`${API_BASE_URL}/auth/demo-users`);
@@ -591,4 +601,3 @@ export const api = {
     ];
   }
 };
-

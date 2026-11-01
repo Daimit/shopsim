@@ -7,6 +7,7 @@ import checkoutRouter from './routes/checkout.js';
 import eventsRouter from './routes/events.js';
 import adminRouter from './routes/admin.js';
 import authRouter from './routes/auth.js';
+import feedbackRouter from './routes/feedback.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -46,6 +47,7 @@ app.use('/api', checkoutRouter);
 app.use('/api', eventsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/auth', authRouter);
+app.use('/api', feedbackRouter);
 
 // Fallback 404 handler
 app.use((_req, res) => {

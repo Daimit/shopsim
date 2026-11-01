@@ -9,11 +9,11 @@
 
 ## Executive Summary
 
-An empirical usability study was conducted with **eight ($N=8$) participants** completing five structured e-commerce purchasing tasks in a controlled simulation environment. A total of **498 interaction events** were captured using the built-in telemetry logging engine, combined with subjective System Usability Scale (SUS) scores and think-aloud qualitative observations.
+The repository includes an **evaluation fixture** representing eight ($N=8$) participant profiles completing five structured e-commerce purchasing tasks in a controlled simulation environment. It contains 498 synthetic interaction events plus seeded SUS/debrief responses for dashboard demonstration; these fixture values must be replaced or clearly labelled as simulated when reporting real participant research. New sessions can submit SUS responses and debrief feedback through the in-app `/feedback` flow.
 
 ### Key Empirical Findings
 1. **Overall Usability Health:** The application achieved an overall mean **SUS score of 70.9 / 100**, placing it in the **"Good" (Grade B / C+)** category of the Bangor/Sauro usability benchmark.
-2. **Overall Task Completion:** The aggregate scenario completion rate was **87.5%** (35 of 40 individual task instances completed successfully).
+2. **Overall Task Completion:** The aggregate scenario completion rate was **87.5%** (36 of 40 individual task instances completed successfully).
 3. **Core Research Question Answer:** The **Payment & Checkout Stage (Step 3)** and **Promo Code Redemption** created the greatest usability friction for users, accounting for **67% of all recorded validation errors** and the highest rate of reverse-navigation backtracking.
 4. **Catalogue & Comparison Success:** The dual-item product comparison matrix and keyword search demonstrated high efficiency, achieving **100% completion** with minimal disorientation.
 
@@ -64,7 +64,7 @@ Task 5: Complete Checkout Wizard    [██████████████�
 
 ### 2.2 System Usability Scale (SUS) Empirical Scores
 
-Each participant completed the 10-item standard SUS survey immediately post-session.
+Each fixture participant has a seeded 10-item SUS response set for evaluation. Real responses are collected in-app at `/feedback` and persisted against the test session.
 
 | Participant ID | Odd Items Contribution | Even Items Contribution | Raw Sum | Composite SUS Score | Adjective Rating |
 | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -84,17 +84,16 @@ Each participant completed the 10-item standard SUS survey immediately post-sess
 
 ### 2.3 Checkout Drop-Off Funnel Analysis
 
-Tracking conversion through the 4-step linear checkout wizard:
+Tracking conversion through the three-step input wizard plus confirmation:
 
 | Funnel Stage | Participants Entering | Drop-Outs | Transition Rate (%) | Cumulative Retention (%) |
 | :--- | :---: | :---: | :---: | :---: |
 | **Step 1: Shipping Details** | 8 | 0 | 100.0% | **100.0%** |
-| **Step 2: Delivery Method** | 8 | 1 | 87.5% | **87.5%** |
-| **Step 3: Simulated Payment** | 7 | 1 | 85.7% | **75.0%** |
-| **Step 4: Order Review** | 6 | 0 | 100.0% | **75.0%** |
+| **Step 2: Simulated Payment** | 8 | 1 | 87.5% | **87.5%** |
+| **Step 3: Order Review** | 7 | 0 | 100.0% | **87.5%** |
 | **Final Confirmation** | 6 | 0 | 100.0% | **75.0%** |
 
-- **Primary Abandonment Node:** Step 2 to Step 3. Participant `P_104` abandoned during delivery selection when free shipping threshold interactions caused confusion with the active promo code. Participant `P_102` dropped out at Step 3 due to repeated credit card formatting rejections.
+- **Primary Abandonment Node:** Payment and review transition. The current prototype does not have a separate delivery-method screen; shipping is free and delivery selection is not an independent interaction.
 
 ---
 

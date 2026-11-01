@@ -40,6 +40,16 @@ interface ParticipantSummary {
   susScore: number | null;
 }
 
+interface FeedbackSummary {
+  participantId: string;
+  sessionId: string;
+  susScore: number | null;
+  effortlessPart: string;
+  hesitationPoint: string;
+  checkoutComparison: string;
+  suggestedChange: string;
+}
+
 interface AnalyticsData {
   overview: {
     totalSessions: number;
@@ -54,6 +64,7 @@ interface AnalyticsData {
   errorsByPage: Record<string, number>;
   checkoutFunnel: Record<string, number>;
   participantSummaries: ParticipantSummary[];
+  feedbackSummaries: FeedbackSummary[];
 }
 
 const EMPTY_DATA: AnalyticsData = {
@@ -63,6 +74,7 @@ const EMPTY_DATA: AnalyticsData = {
   errorsByPage: {},
   checkoutFunnel: {},
   participantSummaries: [],
+  feedbackSummaries: [],
 };
 
 export const AnalyticsPage: React.FC = () => {
@@ -88,7 +100,7 @@ export const AnalyticsPage: React.FC = () => {
     fetchAnalytics();
   }, []);
 
-  const { overview, taskMetrics, eventTypeCounts, errorsByPage, checkoutFunnel, participantSummaries } = data;
+  const { overview, taskMetrics, eventTypeCounts, errorsByPage, checkoutFunnel, participantSummaries, feedbackSummaries } = data;
   const topEventTypes = Object.entries(eventTypeCounts).sort(([, a], [, b]) => b - a).slice(0, 8);
   const topErrors = Object.entries(errorsByPage).sort(([, a], [, b]) => b - a);
   const maxEventCount = Math.max(...topEventTypes.map(([, count]) => count), 1);
@@ -178,6 +190,28 @@ export const AnalyticsPage: React.FC = () => {
               </div>
             </section>
 
+            <section id="feedback" className="overflow-hidden rounded-xl border border-emerald-200 bg-white shadow-sm">
+              <div className="border-b border-emerald-100 bg-emerald-50/60 p-5">
+                <h2 className="text-sm font-bold text-slate-900">Participant feedback analysis</h2>
+                <p className="mt-1 text-xs text-slate-600">Review SUS scores and qualitative comments submitted after checkout.</p>
+              </div>
+              {feedbackSummaries.length ? <div className="divide-y divide-slate-100">{feedbackSummaries.map((feedback) => (
+                <details key={feedback.sessionId} className="group p-5">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                    <div><p className="text-xs font-bold text-slate-900">{feedback.participantId}</p><p className="mt-1 text-[11px] text-slate-500">SUS score: <strong className="text-emerald-700">{feedback.susScore ?? 'Not submitted'}/100</strong></p></div>
+                    <span className="text-xs font-bold text-emerald-700 group-open:hidden">View response</span>
+                    <span className="hidden text-xs font-bold text-slate-500 group-open:inline">Hide response</span>
+                  </summary>
+                  <div className="mt-4 grid gap-3 text-xs sm:grid-cols-2">
+                    <FeedbackQuote label="Most effortless" value={feedback.effortlessPart} />
+                    <FeedbackQuote label="Hesitation point" value={feedback.hesitationPoint} />
+                    <FeedbackQuote label="Checkout comparison" value={feedback.checkoutComparison} />
+                    <FeedbackQuote label="Suggested improvement" value={feedback.suggestedChange} />
+                  </div>
+                </details>
+              ))}</div> : <EmptyState text="Participant feedback will appear after a SUS/debrief response is submitted." />}
+            </section>
+
             <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-100 p-5"><h2 className="text-sm font-bold text-slate-900">Participant behavior summary</h2><p className="mt-1 text-xs text-slate-500">Session-level measurements from the analytics API.</p></div>
               {participantSummaries.length ? <div className="overflow-x-auto"><table className="min-w-[760px] w-full text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase tracking-widest text-slate-400"><tr><th className="px-5 py-3">Participant</th><th className="px-5 py-3">Scenario</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Duration</th><th className="px-5 py-3">Events</th><th className="px-5 py-3">Errors</th><th className="px-5 py-3">Backtracks</th></tr></thead><tbody className="divide-y divide-slate-100">{participantSummaries.map((participant) => <tr key={participant.sessionId} className="hover:bg-slate-50"><td className="px-5 py-3.5 font-bold text-slate-800">{participant.participantId}</td><td className="px-5 py-3.5 text-slate-600">{participant.scenarioId}</td><td className="px-5 py-3.5">{participant.completed ? <span className="font-bold text-emerald-700">Completed</span> : <span className="font-bold text-amber-700">Active</span>}</td><td className="px-5 py-3.5 text-slate-600">{participant.durationSeconds === null ? '—' : `${Math.round(participant.durationSeconds / 60)} min`}</td><td className="px-5 py-3.5 font-mono text-slate-700">{participant.eventCount}</td><td className="px-5 py-3.5 font-mono text-slate-700">{participant.errorCount}</td><td className="px-5 py-3.5 font-mono text-slate-700">{participant.backtrackCount}</td></tr>)}</tbody></table></div> : <EmptyState text="Participant summaries will appear once sessions are collected." />}</section>
@@ -199,3 +233,10 @@ const Panel: React.FC<{ title: string; subtitle: string; icon: React.ReactNode; 
 const EmptyState: React.FC<{ text: string }> = ({ text }) => <div className="rounded-lg bg-slate-50 p-6 text-center text-xs text-slate-500">{text}</div>;
 
 const Insight: React.FC<{ title: string; text: string }> = ({ title, text }) => <article className="rounded-lg border border-purple-100 bg-white/80 p-4"><h3 className="text-xs font-bold text-slate-800">{title}</h3><p className="mt-1 text-xs leading-relaxed text-slate-600">{text}</p></article>;
+
+const FeedbackQuote: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+    <p className="mt-1 leading-relaxed text-slate-700">{value || 'No response provided.'}</p>
+  </div>
+);

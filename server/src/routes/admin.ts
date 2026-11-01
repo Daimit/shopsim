@@ -268,6 +268,7 @@ router.get('/analytics', async (_req: Request, res: Response, next: NextFunction
       include: {
         events: { orderBy: { sequenceNum: 'asc' } },
         taskProgress: true,
+        feedback: true,
       },
       orderBy: { startedAt: 'asc' },
     });
@@ -346,6 +347,11 @@ router.get('/analytics', async (_req: Request, res: Response, next: NextFunction
     }
 
     const susScores: Record<string, number> = {};
+    for (const session of sessions) {
+      if (session.feedback?.susScore !== null && session.feedback?.susScore !== undefined) {
+        susScores[session.participantId] = session.feedback.susScore;
+      }
+    }
 
     const participantSummaries = sessions.map((s) => {
       const duration = s.endedAt
@@ -375,6 +381,18 @@ router.get('/analytics', async (_req: Request, res: Response, next: NextFunction
       };
     });
 
+    const feedbackSummaries = sessions
+      .filter((s) => s.feedback)
+      .map((s) => ({
+        participantId: s.participantId,
+        sessionId: s.id,
+        susScore: s.feedback?.susScore ?? null,
+        effortlessPart: s.feedback?.effortlessPart ?? '',
+        hesitationPoint: s.feedback?.hesitationPoint ?? '',
+        checkoutComparison: s.feedback?.checkoutComparison ?? '',
+        suggestedChange: s.feedback?.suggestedChange ?? '',
+      }));
+
     const susValues = Object.values(susScores);
     const avgSUS = susValues.length > 0
       ? Math.round((susValues.reduce((a, b) => a + b, 0) / susValues.length) * 10) / 10
@@ -398,6 +416,7 @@ router.get('/analytics', async (_req: Request, res: Response, next: NextFunction
         errorsByPage,
         checkoutFunnel,
         participantSummaries,
+        feedbackSummaries,
         susScores: Object.entries(susScores).map(([id, score]) => ({ participantId: id, score })),
       },
     });

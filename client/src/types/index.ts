@@ -157,3 +157,19 @@ export interface ProductReview {
   comment: string;
   verified: boolean;
 }
+
+export interface ResearchFeedback {
+  responses: number[];
+  demographics: {
+    ageRange: string;
+    shoppingFrequency: string;
+    technicalComfort: number;
+    deviceType: string;
+  };
+  debrief: {
+    effortlessPart: string;
+    hesitationPoint: string;
+    checkoutComparison: string;
+    suggestedChange: string;
+  };
+}

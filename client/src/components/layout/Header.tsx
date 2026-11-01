@@ -25,6 +25,22 @@ import { api } from '../../lib/api';
 import { Category, Product } from '../../types';
 import { tracker } from '../../lib/tracker';
 
+const getProductSpecPreview = (specs: Product['specs']) => {
+  if (!specs) return 'Wireless noise canceling';
+
+  try {
+    const parsedSpecs = typeof specs === 'string' ? JSON.parse(specs) : specs;
+    if (parsedSpecs && typeof parsedSpecs === 'object') {
+      const firstValue = Object.values(parsedSpecs as Record<string, unknown>)[0];
+      if (firstValue) return String(firstValue);
+    }
+  } catch {
+    return 'Wireless noise canceling';
+  }
+
+  return 'Premium flagship';
+};
+
 export const Header: React.FC = () => {
   const navigate = useNavigate();
   const { cart, fetchCart } = useCartStore();
@@ -155,6 +171,7 @@ export const Header: React.FC = () => {
                 <nav className="flex flex-col p-4 space-y-2">
                   <Link to="/" className="text-slate-700 hover:text-blue-600" onClick={() => setIsMobileNavOpen(false)}>Home</Link>
                   <Link to="/compare" className="text-slate-700 hover:text-blue-600" onClick={() => setIsMobileNavOpen(false)}>Compare</Link>
+                  <Link to="/feedback" className="text-emerald-700 hover:text-emerald-800 font-semibold" onClick={() => setIsMobileNavOpen(false)}>Share feedback</Link>
                   {user?.role === 'admin' && (
                     <Link to="/admin" className="text-purple-700 hover:text-purple-600" onClick={() => setIsMobileNavOpen(false)}>Admin Dashboard</Link>
                   )}
@@ -209,6 +226,14 @@ export const Header: React.FC = () => {
                     {compareItems.length}
                   </span>
                 )}
+              </Link>
+
+              <Link
+                to="/feedback"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 transition-colors"
+                data-track="header_feedback_link"
+              >
+                <span>Feedback</span>
               </Link>
             </nav>
           </div>
@@ -288,7 +313,7 @@ export const Header: React.FC = () => {
                             {prod.name}
                           </p>
                           <p className="text-[11px] text-slate-400 truncate">
-                            {prod.specs ? Object.values(JSON.parse(prod.specs || '{}'))[0] as string || 'Premium flagship' : 'Wireless noise canceling'}
+                            {getProductSpecPreview(prod.specs)}
                           </p>
                         </div>
                       </div>

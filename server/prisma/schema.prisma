@@ -98,6 +98,34 @@ model TestSession {
   screenSize    String?
   events        InteractionEvent[]
   taskProgress  TaskProgress[]
+  demographics  ParticipantDemographics?
+  feedback      PostTestFeedback?
+}
+
+model ParticipantDemographics {
+  id                 Int         @id @default(autoincrement())
+  sessionId          String      @unique
+  session            TestSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  ageRange           String?
+  shoppingFrequency  String?
+  technicalComfort   Int?
+  deviceType         String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+}
+
+model PostTestFeedback {
+  id                  Int         @id @default(autoincrement())
+  sessionId           String      @unique
+  session             TestSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  susResponses        String
+  susScore            Float?
+  effortlessPart      String?
+  hesitationPoint     String?
+  checkoutComparison  String?
+  suggestedChange     String?
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
 }
 
 model InteractionEvent {
@@ -133,4 +161,3 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
-
