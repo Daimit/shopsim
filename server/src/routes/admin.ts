@@ -354,30 +354,46 @@ router.get('/analytics', async (_req: Request, res: Response, next: NextFunction
     }
 
     const participantSummaries = sessions.map((s) => {
-      const duration = s.endedAt
+      const durationSeconds = s.endedAt
         ? Math.max(1, Math.round((new Date(s.endedAt).getTime() - new Date(s.startedAt).getTime()) / 1000))
         : null;
-      const completedTasks = s.taskProgress.filter((tp) => tp.status === 'completed').length;
-      const totalTasks = s.taskProgress.length;
-      const errors = s.events.filter((e) =>
+      const sessionErrors = s.events.filter((e) =>
         ['error', 'form_error', 'checkout_error', 'cart_error', 'coupon_error'].includes(e.eventType)
       ).length;
       const backtracks = s.events.filter((e) => e.eventType === 'navigation_back').length;
-      const susScore = susScores[s.participantId] ?? null;
+
+      const repeatedActionCount = s.events.reduce((acc, ev, idx, arr) => {
+        if (idx === 0) return 0;
+        const prev = arr[idx - 1];
+        return prev.eventType === ev.eventType && prev.page === ev.page && prev.target === ev.target
+          ? acc + 1
+          : acc;
+      }, 0);
+
+      const correctionCount = s.events.filter((e) =>
+        ['quantity_change', 'cart_remove', 'coupon_error', 'form_error'].includes(e.eventType)
+      ).length;
+
+      const incorrectSelectionCount = s.events.filter((e) =>
+        ['cart_remove', 'compare_remove'].includes(e.eventType)
+      ).length;
 
       return {
         participantId: s.participantId,
         sessionId: s.id,
         scenarioId: s.scenarioId,
-        screenSize: s.screenSize,
+        screenSize: s.screenSize || 'unknown',
         completed: s.completed,
-        durationSeconds: duration,
+        durationSeconds,
         eventCount: s.events.length,
-        completedTasks,
-        totalTasks,
-        errorCount: errors,
+        completedTasks: s.taskProgress.filter((t) => t.status === 'completed').length,
+        totalTasks: s.taskProgress.length,
+        errorCount: sessionErrors,
         backtrackCount: backtracks,
-        susScore,
+        repeatedActionCount,
+        correctionCount,
+        incorrectSelectionCount,
+        susScore: s.feedback?.susScore ?? null,
       };
     });
 
@@ -399,6 +415,23 @@ router.get('/analytics', async (_req: Request, res: Response, next: NextFunction
       : null;
 
     const completedSessions = sessions.filter((s) => s.completed).length;
+    const validDurations = participantSummaries
+      .map((p) => p.durationSeconds)
+      .filter((d): d is number => typeof d === 'number' && d > 0);
+
+    const evaluationBreakdown = {
+      avgCompletionTimeSeconds: validDurations.length
+        ? Math.round(validDurations.reduce((a, b) => a + b, 0) / validDurations.length)
+        : 0,
+      abandonedTaskCount: taskMetrics.reduce((sum, t) => sum + t.abandoned + t.inProgress, 0),
+      incorrectProductSelections: participantSummaries.reduce((sum, p) => sum + p.incorrectSelectionCount, 0),
+      unnecessaryNavigation: participantSummaries.reduce((sum, p) => sum + p.backtrackCount, 0),
+      repeatedActions: participantSummaries.reduce((sum, p) => sum + p.repeatedActionCount, 0),
+      corrections: participantSummaries.reduce((sum, p) => sum + p.correctionCount, 0),
+      checkoutProblems: allEvents.filter(
+        (e) => e.eventType === 'checkout_error' || (e.eventType === 'form_error' && e.page.includes('checkout'))
+      ).length,
+    };
 
     res.json({
       success: true,
@@ -415,6 +448,7 @@ router.get('/analytics', async (_req: Request, res: Response, next: NextFunction
         eventTypeCounts,
         errorsByPage,
         checkoutFunnel,
+        evaluationBreakdown,
         participantSummaries,
         feedbackSummaries,
         susScores: Object.entries(susScores).map(([id, score]) => ({ participantId: id, score })),

@@ -37,7 +37,20 @@ interface ParticipantSummary {
   totalTasks: number;
   errorCount: number;
   backtrackCount: number;
+  repeatedActionCount: number;
+  correctionCount: number;
+  incorrectSelectionCount: number;
   susScore: number | null;
+}
+
+interface EvaluationBreakdown {
+  avgCompletionTimeSeconds: number;
+  abandonedTaskCount: number;
+  incorrectProductSelections: number;
+  unnecessaryNavigation: number;
+  repeatedActions: number;
+  corrections: number;
+  checkoutProblems: number;
 }
 
 interface FeedbackSummary {
@@ -63,6 +76,7 @@ interface AnalyticsData {
   eventTypeCounts: Record<string, number>;
   errorsByPage: Record<string, number>;
   checkoutFunnel: Record<string, number>;
+  evaluationBreakdown: EvaluationBreakdown;
   participantSummaries: ParticipantSummary[];
   feedbackSummaries: FeedbackSummary[];
 }
@@ -73,6 +87,15 @@ const EMPTY_DATA: AnalyticsData = {
   eventTypeCounts: {},
   errorsByPage: {},
   checkoutFunnel: {},
+  evaluationBreakdown: {
+    avgCompletionTimeSeconds: 0,
+    abandonedTaskCount: 0,
+    incorrectProductSelections: 0,
+    unnecessaryNavigation: 0,
+    repeatedActions: 0,
+    corrections: 0,
+    checkoutProblems: 0,
+  },
   participantSummaries: [],
   feedbackSummaries: [],
 };
@@ -100,7 +123,7 @@ export const AnalyticsPage: React.FC = () => {
     fetchAnalytics();
   }, []);
 
-  const { overview, taskMetrics, eventTypeCounts, errorsByPage, checkoutFunnel, participantSummaries, feedbackSummaries } = data;
+  const { overview, taskMetrics, eventTypeCounts, errorsByPage, checkoutFunnel, evaluationBreakdown, participantSummaries, feedbackSummaries } = data;
   const topEventTypes = Object.entries(eventTypeCounts).sort(([, a], [, b]) => b - a).slice(0, 8);
   const topErrors = Object.entries(errorsByPage).sort(([, a], [, b]) => b - a);
   const maxEventCount = Math.max(...topEventTypes.map(([, count]) => count), 1);
@@ -166,6 +189,22 @@ export const AnalyticsPage: React.FC = () => {
 
         {isLoading ? <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-xs text-slate-500">Aggregating collected telemetry…</div> : (
           <>
+            <section id="evaluation" className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4">
+                <h2 className="text-sm font-bold text-slate-900">Evaluation breakdown</h2>
+                <p className="mt-1 text-xs text-slate-500">Behavioral measures derived from participant sessions and task progress.</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <BreakdownMetric label="Avg. completion time" value={`${evaluationBreakdown.avgCompletionTimeSeconds}s`} />
+                <BreakdownMetric label="Abandoned tasks" value={evaluationBreakdown.abandonedTaskCount} />
+                <BreakdownMetric label="Incorrect selections" value={evaluationBreakdown.incorrectProductSelections} />
+                <BreakdownMetric label="Unnecessary navigation" value={evaluationBreakdown.unnecessaryNavigation} />
+                <BreakdownMetric label="Repeated actions" value={evaluationBreakdown.repeatedActions} />
+                <BreakdownMetric label="Corrections" value={evaluationBreakdown.corrections} />
+                <BreakdownMetric label="Checkout problems" value={evaluationBreakdown.checkoutProblems} />
+              </div>
+            </section>
+
             <section id="tasks" className="grid gap-4 xl:grid-cols-[1.25fr_1fr]">
               <Panel title="Task completion funnel" subtitle="Measured task progress across participants" icon={<TrendingDown className="h-4 w-4 text-blue-600" />}>
                 {taskMetrics.length ? <div className="space-y-4">{taskMetrics.map((task) => <div key={task.taskId}><div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 text-xs"><span className="font-bold text-slate-800">{task.name}</span><span className="font-semibold text-slate-500">{task.completionRate}% · {task.completed}/{task.total} completed</span></div><div className="h-2.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${task.completionRate >= 80 ? 'bg-emerald-500' : task.completionRate >= 50 ? 'bg-blue-500' : 'bg-amber-500'}`} style={{ width: `${task.total ? task.completionRate : 0}%` }} /></div><div className="mt-1 flex gap-3 text-[10px] text-slate-400"><span>{task.abandoned} abandoned</span><span>{task.inProgress} in progress</span><span><Clock3 className="mr-0.5 inline h-3 w-3" />{task.avgTimeSeconds || 0}s avg</span></div></div>)}</div> : <EmptyState text="Task progress will appear after participants complete study tasks." />}</Panel>
@@ -224,6 +263,13 @@ export const AnalyticsPage: React.FC = () => {
 
 const Metric: React.FC<{ label: string; value: string | number; icon: React.ReactNode; tone: string; note?: string }> = ({ label, value, icon, tone, note = 'Measured from collected data' }) => (
   <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</span><span className={`rounded-lg p-2 ${tone === 'blue' ? 'bg-blue-50 text-blue-600' : tone === 'green' ? 'bg-emerald-50 text-emerald-600' : tone === 'purple' ? 'bg-purple-50 text-purple-600' : tone === 'orange' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-600'}`}>{icon}</span></div><p className="mt-4 text-2xl font-black tracking-tight text-slate-950">{value}</p><p className="mt-1 text-[11px] text-slate-500">{note}</p></div>
+);
+
+const BreakdownMetric: React.FC<{ label: string; value: string | number }> = ({ label, value }) => (
+  <div className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+    <p className="mt-2 text-xl font-black tracking-tight text-slate-900">{value}</p>
+  </div>
 );
 
 const Panel: React.FC<{ title: string; subtitle: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, subtitle, icon, children }) => (
