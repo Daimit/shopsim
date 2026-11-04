@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useCartStore } from '../../store/cartStore';
+import { tracker } from '../../lib/tracker';
 import { Tag, CheckCircle2, AlertCircle, X, Sparkles } from 'lucide-react';
 
 interface DiscountOffer {
@@ -23,7 +24,8 @@ export const DiscountInput: React.FC = () => {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [offersOpen, setOffersOpen] = useState(false);
+  // Milestone 4 UX Improvement: Keep available promo codes visible by default
+  const [offersOpen, setOffersOpen] = useState(true);
 
   const offers = useMemo<DiscountOffer[]>(() => {
     const offers: DiscountOffer[] = [
@@ -75,16 +77,29 @@ export const DiscountInput: React.FC = () => {
     setStatusMessage(null);
     setIsError(false);
 
-    const result = await applyDiscount(cleanCode);
-    setIsSubmitting(false);
-
-    if (result.success) {
-      setIsError(false);
-      setStatusMessage(`${cleanCode} applied successfully!`);
-      setCode('');
-    } else {
+    try {
+      const result = await applyDiscount(cleanCode);
+      if (result.success) {
+        setStatusMessage(`Promo code "${cleanCode}" applied!`);
+        setIsError(false);
+        setCode('');
+      } else {
+        setStatusMessage('Invalid or ineligible promo code. Try SAVE20 for 20% off.');
+        setIsError(true);
+        tracker.track('coupon_error', 'discount_input', {
+          attemptedCode: cleanCode,
+          reason: 'invalid_or_ineligible',
+        });
+      }
+    } catch {
+      setStatusMessage('Could not apply promo code. Try SAVE20.');
       setIsError(true);
-      setStatusMessage(result.message || 'Invalid discount code');
+      tracker.track('coupon_error', 'discount_input', {
+        attemptedCode: cleanCode,
+        reason: 'request_failed',
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

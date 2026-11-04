@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useSessionStore, STUDY_TASKS } from '../../store/sessionStore';
-import { Target, X, CheckCircle, ChevronDown, ListOrdered } from 'lucide-react';
+import { tracker } from '../../lib/tracker';
+import { Target, X, CheckCircle, ChevronDown, ListOrdered, AlertTriangle } from 'lucide-react';
 
 export const TaskBanner: React.FC = () => {
   const {
@@ -27,6 +28,17 @@ export const TaskBanner: React.FC = () => {
       const nextTask = activeTask.taskNumber < 5 ? activeTask.taskNumber + 1 : 1;
       setActiveTask(nextTask);
     }, 800);
+  };
+
+  const handleAbandon = () => {
+    if (!activeTask) return;
+    tracker.track('task_abandon', activeTask.id, {
+      taskId: activeTask.id,
+      taskNumber: activeTask.taskNumber,
+      title: activeTask.title,
+    });
+    const nextTask = activeTask.taskNumber < STUDY_TASKS.length ? activeTask.taskNumber + 1 : 1;
+    setActiveTask(nextTask);
   };
 
   if (isBannerDismissed) {
@@ -96,20 +108,31 @@ export const TaskBanner: React.FC = () => {
           <span className="line-clamp-2 md:line-clamp-1">{activeTask.instruction}</span>
         </div>
 
-        {/* Right: Complete & Dismiss buttons */}
+        {/* Right: Task actions & dismiss button */}
         <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
-          <button
-            onClick={handleComplete}
-            disabled={completedAnimation}
-            className={`flex items-center gap-1 text-xs font-medium px-3 py-1 rounded transition-all ${
-              completedAnimation
-                ? 'bg-green-600 text-white'
-                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-            }`}
-          >
-            <CheckCircle className="w-3.5 h-3.5" />
-            {completedAnimation ? 'Completed!' : 'Mark Completed'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleAbandon}
+              title="Mark current task as abandoned and move to next"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 transition-colors hover:bg-rose-100"
+            >
+              <AlertTriangle className="h-3.5 w-3.5" />
+              Abandon Task
+            </button>
+
+            <button
+              onClick={handleComplete}
+              disabled={completedAnimation}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white transition-all ${
+                completedAnimation
+                  ? 'scale-95 bg-emerald-500'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+              }`}
+            >
+              <CheckCircle className="h-3.5 w-3.5" />
+              {completedAnimation ? 'Completed!' : 'Complete Task'}
+            </button>
+          </div>
 
           <button
             onClick={dismissBanner}
