@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { productImages } from './update-images';
+import { productImages, productGalleryImages } from './update-images';
 
 const prisma = new PrismaClient();
 
@@ -1083,8 +1083,14 @@ async function main() {
   ];
 
   for (const item of productsData) {
+    const mainImg = productImages[item.slug] || item.image;
+    const gallery = productGalleryImages[item.slug] || [mainImg];
     await prisma.product.create({
-      data: { ...item, image: productImages[item.slug] || item.image },
+      data: {
+        ...item,
+        image: mainImg,
+        images: JSON.stringify(gallery),
+      },
     });
   }
 

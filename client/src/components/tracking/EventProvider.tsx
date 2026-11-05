@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { tracker } from '../../lib/tracker';
 import { useSessionStore } from '../../store/sessionStore';
@@ -15,32 +15,40 @@ export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const location = useLocation();
   const initSession = useSessionStore(state => state.initSession);
   const setActiveTask = useSessionStore(state => state.setActiveTask);
+  const [sessionReady, setSessionReady] = useState(false);
 
   // Initialize session and tracker
   useEffect(() => {
+    let cancelled = false;
     tracker.init();
-    initSession();
+    void initSession().then(() => {
+      if (cancelled) return;
+      setSessionReady(true);
 
-    // Check URL query parameters for ?task=1..5
-    const params = new URLSearchParams(location.search);
-    const taskParam = params.get('task');
-    if (taskParam) {
-      const taskNum = parseInt(taskParam, 10);
-      if (!isNaN(taskNum) && taskNum >= 1 && taskNum <= 5) {
-        setActiveTask(taskNum);
+      const params = new URLSearchParams(location.search);
+      const taskParam = params.get('task');
+      if (taskParam) {
+        const taskNum = parseInt(taskParam, 10);
+        if (!isNaN(taskNum) && taskNum >= 1 && taskNum <= 5) {
+          setActiveTask(taskNum);
+        }
       }
-    }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Track page_view on route or search change
   useEffect(() => {
+    if (!sessionReady) return;
     const page = location.pathname + location.search;
     tracker.track('page_view', 'route_navigation', {
       pathname: location.pathname,
       search: location.search,
       title: document.title,
     }, page);
-  }, [location.pathname, location.search]);
+  }, [location.pathname, location.search, sessionReady]);
 
   // Global click event listener
   useEffect(() => {

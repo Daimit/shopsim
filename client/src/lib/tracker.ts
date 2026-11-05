@@ -55,6 +55,14 @@ class EventTracker {
     window.addEventListener('beforeunload', () => {
       this.flushSync();
     });
+    window.addEventListener('pagehide', () => {
+      this.flushSync();
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        this.flushSync();
+      }
+    });
   }
 
   private startFlushTimer() {
@@ -122,7 +130,10 @@ class EventTracker {
     this.buffer = [];
 
     try {
-      await api.sendEvents(eventsToSend);
+      const sent = await api.sendEvents(eventsToSend);
+      if (!sent) {
+        throw new Error('Event submission was not acknowledged');
+      }
     } catch {
       // Re-queue events if network error occurs (prevent excessive memory)
       if (this.buffer.length < 50) {

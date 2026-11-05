@@ -37,6 +37,7 @@ export interface Product {
   description: string;
   price: number;
   image: string;
+  images?: string | string[];    // JSON array or parsed array of image URLs for gallery
   categoryId: number;
   category?: Category;
   rating: number;
@@ -104,6 +105,24 @@ export interface Order {
   items: CartItem[];
 }
 
+export interface ResearchOrder {
+  id: number;
+  sessionId: string;
+  researchSessionId?: string | null;
+  totalAmount: number;
+  discountAmount: number;
+  shippingData: ShippingData | Record<string, unknown>;
+  paymentMethod: string;
+  status: string;
+  createdAt: string;
+  items: Array<{
+    productId?: number;
+    name: string;
+    price: number;
+    quantity: number;
+  }>;
+}
+
 export interface InteractionEvent {
   sessionId: string;
   timestamp: string;
@@ -134,6 +153,8 @@ export interface TestSession {
   userAgent?: string;
   screenSize?: string;
   events?: InteractionEvent[];
+  orderCount?: number;
+  orders?: ResearchOrder[];
 }
 
 export interface ProductFilters {

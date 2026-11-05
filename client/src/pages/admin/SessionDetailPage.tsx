@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { TestSession, InteractionEvent, TaskProgress } from '../../types';
+import { TestSession, InteractionEvent } from '../../types';
 import { api } from '../../lib/api';
 import { tracker } from '../../lib/tracker';
 import { STUDY_TASKS } from '../../store/sessionStore';
@@ -140,6 +140,7 @@ export const SessionDetailPage: React.FC = () => {
   const pageViewCount = events.filter(e => e.eventType === 'page_view').length;
   const errorCount = events.filter(e => e.eventType.includes('error')).length;
   const clicksCount = events.filter(e => e.eventType === 'click').length;
+  const orders = session?.orders || [];
 
   return (
     <div className="space-y-8 pb-20">
@@ -195,6 +196,35 @@ export const SessionDetailPage: React.FC = () => {
           </p>
           <p className="text-[11px] text-slate-500">Input validation errors</p>
         </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">Orders placed</h2>
+            <p className="text-xs text-slate-400 mt-1">Orders linked to this research session</p>
+          </div>
+          <span className="text-sm font-black text-blue-600">{orders.length}</span>
+        </div>
+        {orders.length === 0 ? (
+          <p className="p-5 text-xs text-slate-500">No orders were placed in this session.</p>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {orders.map((order) => (
+              <div key={order.id} className="p-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-bold text-slate-900">Order #{order.id}</p>
+                  <p className="text-xs text-slate-500">{order.items.length} items · {new Date(order.createdAt).toLocaleString()}</p>
+                  <p className="text-xs text-slate-500">{order.shippingData && typeof order.shippingData === 'object' && 'email' in order.shippingData ? String(order.shippingData.email) : 'Shipping details recorded'}</p>
+                </div>
+                <div className="text-left sm:text-right">
+                  <p className="text-base font-black text-slate-900">${order.totalAmount.toFixed(2)}</p>
+                  <p className="text-xs font-bold text-emerald-600">{order.status}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Usability Study Tasks Matrix */}

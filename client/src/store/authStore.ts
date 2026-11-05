@@ -3,6 +3,10 @@ import { User, DemoAccount } from '../types';
 import { api } from '../lib/api';
 import { tracker } from '../lib/tracker';
 
+const notifyAuthChanged = () => {
+  window.dispatchEvent(new CustomEvent('shopsim:auth-changed'));
+};
+
 interface AuthState {
   user: User | null;
   token: string | null;
@@ -127,6 +131,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isAuthModalOpen: false,
           pendingAction: null
         });
+        notifyAuthChanged();
 
         tracker.track('login_success', 'login_form', {
           userId: res.user.id,
@@ -178,6 +183,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isAuthModalOpen: false,
           pendingAction: null
         });
+        notifyAuthChanged();
 
         tracker.track('demo_login_success', 'quick_login_button', {
           role: res.user.role,
@@ -222,6 +228,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isAuthModalOpen: false,
           pendingAction: null
         });
+        notifyAuthChanged();
 
         tracker.track('register_success', 'register_form', {
           userId: res.user.id,
@@ -271,5 +278,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       token: null,
       error: null
     });
+    notifyAuthChanged();
   }
 }));

@@ -27,6 +27,7 @@ model Product {
   description String
   price       Float
   image       String
+  images      String     @default("[]") // JSON array of image URLs for gallery
   categoryId  Int
   category    Category   @relation(fields: [categoryId], references: [id])
   rating      Float      @default(0.0)
@@ -77,6 +78,8 @@ model DiscountCode {
 model Order {
   id             Int           @id @default(autoincrement())
   sessionId      String
+  researchSessionId String?
+  researchSession   TestSession? @relation(fields: [researchSessionId], references: [id], onDelete: SetNull)
   totalAmount    Float
   discountAmount Float         @default(0.0)
   discountId     Int?
@@ -100,6 +103,7 @@ model TestSession {
   taskProgress  TaskProgress[]
   demographics  ParticipantDemographics?
   feedback      PostTestFeedback?
+  orders        Order[]
 }
 
 model ParticipantDemographics {

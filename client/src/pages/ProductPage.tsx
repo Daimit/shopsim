@@ -11,6 +11,7 @@ import { RatingStars } from '../components/product/RatingStars';
 import { QuantityStepper } from '../components/cart/QuantityStepper';
 import { ProductSpecs } from '../components/product/ProductSpecs';
 import { ProductReviews } from '../components/product/ProductReviews';
+import { ProductImageGallery } from '../components/product/ProductImageGallery';
 import {
   ShoppingCart,
   Scale,
@@ -148,19 +149,28 @@ export const ProductPage: React.FC = () => {
 
       {/* Main 2-Column Product Detail Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
-        {/* Left Column: Image */}
-        <div className="bg-white rounded-3xl border border-slate-200/90 p-4 sm:p-6 shadow-xs overflow-hidden relative group">
-          <div className="aspect-square w-full rounded-2xl overflow-hidden bg-slate-50 relative">
-            <img
-              src={product.image}
-              alt={product.name}
-              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-            />
-          </div>
+        {/* Left Column: Image Gallery (Amazon/Flipkart style) */}
+        <div>
+          <ProductImageGallery
+            mainImage={product.image}
+            images={(() => {
+              try {
+                if (Array.isArray(product.images)) return product.images;
+                if (typeof product.images === 'string') {
+                  const parsed = JSON.parse(product.images || '[]');
+                  return Array.isArray(parsed) ? parsed : [];
+                }
+                return [];
+              } catch {
+                return [];
+              }
+            })()}
+            productName={product.name}
+          />
 
           {/* Out of Stock Overlay */}
           {isOutOfStock && (
-            <div className="absolute top-8 left-8 bg-rose-600/95 backdrop-blur-xs text-white text-xs font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-md">
+            <div className="mt-2 bg-rose-600/95 backdrop-blur-xs text-white text-xs font-black uppercase tracking-wider px-3 py-2 rounded-full shadow-md text-center">
               Currently Out of Stock
             </div>
           )}

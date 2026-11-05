@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Product } from '../types';
 import { tracker } from '../lib/tracker';
+import { getFavoritesStorageKey } from '../lib/shoppingScope';
 
 interface FavoriteState {
   items: Product[];
@@ -12,7 +13,7 @@ interface FavoriteState {
 
 const getStoredFavorites = (): Product[] => {
   try {
-    const raw = localStorage.getItem('shopsim_favorite_items');
+    const raw = localStorage.getItem(getFavoritesStorageKey());
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -21,7 +22,7 @@ const getStoredFavorites = (): Product[] => {
 
 const saveFavorites = (items: Product[]) => {
   try {
-    localStorage.setItem('shopsim_favorite_items', JSON.stringify(items));
+    localStorage.setItem(getFavoritesStorageKey(), JSON.stringify(items));
   } catch {
     // Storage can be unavailable in private browsing; the in-memory state still works.
   }
@@ -65,3 +66,11 @@ export const useFavoriteStore = create<FavoriteState>((set, get) => ({
 
   isFavorite: (productId) => get().items.some((item) => item.id === productId),
 }));
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('shopsim:auth-changed', () => {
+    setTimeout(() => {
+      useFavoriteStore.setState({ items: getStoredFavorites() });
+    }, 0);
+  });
+}

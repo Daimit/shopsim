@@ -22,6 +22,7 @@ router.get('/sessions', async (_req: Request, res: Response, next: NextFunction)
           select: {
             events: true,
             taskProgress: true,
+            orders: true,
           },
         },
         taskProgress: true,
@@ -46,6 +47,7 @@ router.get('/sessions', async (_req: Request, res: Response, next: NextFunction)
         eventCount: s._count.events,
         taskCount: s._count.taskProgress,
         completedTaskCount: completedTasks,
+        orderCount: s._count.orders,
         durationSeconds,
       };
     });
@@ -152,6 +154,9 @@ router.get('/export/:sessionId', async (req: Request, res: Response, next: NextF
         taskProgress: {
           orderBy: { startedAt: 'asc' },
         },
+        orders: {
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
@@ -169,6 +174,11 @@ router.get('/export/:sessionId', async (req: Request, res: Response, next: NextF
       taskProgress: session.taskProgress.map((t) => ({
         ...t,
         stepLog: safeJsonParse(t.stepLog),
+      })),
+      orders: session.orders.map((order) => ({
+        ...order,
+        shippingData: safeJsonParse(order.shippingData, {}),
+        items: safeJsonParse(order.shippingData, {}).items || [],
       })),
     };
 
@@ -195,6 +205,9 @@ router.get('/sessions/:id', async (req: Request, res: Response, next: NextFuncti
         taskProgress: {
           orderBy: { startedAt: 'asc' },
         },
+        orders: {
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
@@ -211,6 +224,11 @@ router.get('/sessions/:id', async (req: Request, res: Response, next: NextFuncti
         taskProgress: session.taskProgress.map((t) => ({
           ...t,
           stepLog: safeJsonParse(t.stepLog),
+        })),
+        orders: session.orders.map((order) => ({
+          ...order,
+          shippingData: safeJsonParse(order.shippingData, {}),
+          items: safeJsonParse(order.shippingData, {}).items || [],
         })),
       },
     });
@@ -341,7 +359,11 @@ router.get('/analytics', async (_req: Request, res: Response, next: NextFunction
         else if (step === 3 || step === 'payment') checkoutFunnel.step_3_payment++;
         else if (step === 4 || step === 'review') checkoutFunnel.step_4_review++;
       }
-      if (e.page === '/checkout/success' || (e.target && e.target.includes('confirm_order'))) {
+      if (
+        e.eventType === 'checkout_complete' ||
+        e.page === '/checkout/success' ||
+        (e.target && e.target.includes('confirm_order'))
+      ) {
         checkoutFunnel.order_confirmed++;
       }
     }

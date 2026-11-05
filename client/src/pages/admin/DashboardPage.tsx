@@ -35,21 +35,36 @@ export const DashboardPage: React.FC = () => {
   const pageSize = 8;
   const { user, demoLogin } = useAuthStore();
 
-  const fetchSessions = async () => {
-    setIsLoading(true);
+  const fetchSessions = async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
     setError(null);
     try {
       setSessions(await api.getSessions());
     } catch {
       setError('We could not load participant sessions. Try again.');
     } finally {
-      setIsLoading(false);
+      if (showLoading) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     document.title = 'Research OS - Overview';
     fetchSessions();
+    const refreshOnFocus = () => {
+      if (document.visibilityState === 'visible') fetchSessions();
+    };
+    document.addEventListener('visibilitychange', refreshOnFocus);
+    window.addEventListener('focus', refreshOnFocus);
+    const refreshTimer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void fetchSessions(false);
+      }
+    }, 5000);
+    return () => {
+      document.removeEventListener('visibilitychange', refreshOnFocus);
+      window.removeEventListener('focus', refreshOnFocus);
+      window.clearInterval(refreshTimer);
+    };
   }, []);
 
   const filteredSessions = useMemo(() => sessions.filter((session) => {
@@ -68,8 +83,21 @@ export const DashboardPage: React.FC = () => {
   const averageDuration = sessions.length
     ? Math.round(sessions.reduce((sum, session) => sum + (session.endedAt ? (new Date(session.endedAt).getTime() - new Date(session.startedAt).getTime()) / 60000 : 0), 0) / sessions.filter((session) => session.endedAt).length || 0)
     : 0;
-  const trend = Array.from({ length: 7 }, (_, index) => sessions.filter((session) => new Date(session.startedAt).getDay() === index).length);
-  const maxTrend = Math.max(...trend, 1);
+  const trend = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - (6 - index));
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return {
+      label: date.toLocaleDateString([], { weekday: 'short' }),
+      count: sessions.filter((session) => {
+        const startedAt = new Date(session.startedAt);
+        const startedKey = `${startedAt.getFullYear()}-${String(startedAt.getMonth() + 1).padStart(2, '0')}-${String(startedAt.getDate()).padStart(2, '0')}`;
+        return startedKey === dateKey;
+      }).length,
+    };
+  });
+  const maxTrend = Math.max(...trend.map((entry) => entry.count), 1);
 
   const exportCsv = () => {
     if (!sessions.length) return;
@@ -100,7 +128,7 @@ export const DashboardPage: React.FC = () => {
             <p className="mt-1 text-sm text-slate-500">A clear view of participant activity and study health.</p>
           </div>
           <div className="flex gap-2">
-            <button type="button" onClick={fetchSessions} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} /> Refresh</button>
+            <button type="button" onClick={() => void fetchSessions()} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} /> Refresh</button>
             <button type="button" onClick={exportCsv} disabled={!sessions.length} className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"><Download className="h-3.5 w-3.5" /> Export</button>
           </div>
         </header>
@@ -116,7 +144,20 @@ export const DashboardPage: React.FC = () => {
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between"><div><h2 className="text-sm font-bold text-slate-900">Session activity</h2><p className="mt-1 text-xs text-slate-500">Recorded sessions by day of week</p></div><Activity className="h-4 w-4 text-blue-600" /></div>
             <div className="mt-6 flex h-36 items-end gap-2">
-              {trend.map((count, index) => <div key={index} className="flex flex-1 flex-col items-center gap-2"><div className="w-full rounded-t-md bg-blue-500/80 transition-all" style={{ height: `${Math.max(8, (count / maxTrend) * 100)}%` }} title={`${count} sessions`} /><span className="text-[10px] text-slate-400">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][index]}</span></div>)}
+              {trend.map((entry) => {
+                const barHeight = entry.count > 0
+                  ? Math.max(20, Math.round((entry.count / maxTrend) * 112))
+                  : 4;
+                return (
+                  <div key={entry.label} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
+                    <span className="text-[10px] font-bold text-slate-500">{entry.count}</span>
+                    <div className="flex h-28 w-full items-end">
+                      <div className="w-full rounded-t-md bg-blue-500 transition-all" style={{ height: `${barHeight}px` }} title={`${entry.count} sessions`} />
+                    </div>
+                    <span className="text-[10px] text-slate-400">{entry.label}</span>
+                  </div>
+                );
+              })}
             </div>
           </section>
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

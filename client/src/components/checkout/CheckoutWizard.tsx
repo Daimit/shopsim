@@ -9,6 +9,7 @@ import { useCartStore } from '../../store/cartStore';
 import { useSessionStore } from '../../store/sessionStore';
 import { tracker } from '../../lib/tracker';
 import { api } from '../../lib/api';
+import { getShoppingSessionId } from '../../lib/shoppingScope';
 
 const defaultShipping: ShippingData = {
   firstName: '',
@@ -66,9 +67,10 @@ export const CheckoutWizard: React.FC = () => {
   const handlePlaceOrder = async () => {
     setIsPlacingOrder(true);
     try {
-      const sessionId = tracker.getSessionId();
+      const sessionId = getShoppingSessionId();
       const order = await api.createOrder({
         sessionId,
+        researchSessionId: tracker.getSessionId(),
         shippingData,
         paymentMethod: paymentData.method,
       });

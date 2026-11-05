@@ -45,7 +45,7 @@ router.get('/orders', async (req: Request, res: Response, next: NextFunction) =>
 router.post('/checkout/:sessionId', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { sessionId } = req.params;
-    const { shippingData, paymentMethod = 'credit_card' } = req.body;
+    const { shippingData, paymentMethod = 'credit_card', researchSessionId } = req.body;
 
     if (!shippingData) {
       res.status(400).json({ success: false, error: 'shippingData is required' });
@@ -107,6 +107,7 @@ router.post('/checkout/:sessionId', async (req: Request, res: Response, next: Ne
     const order = await prisma.order.create({
       data: {
         sessionId,
+        researchSessionId: typeof researchSessionId === 'string' ? researchSessionId : null,
         totalAmount,
         discountAmount: roundedDiscount,
         discountId: cart.discountId,

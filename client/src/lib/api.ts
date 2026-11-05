@@ -335,6 +335,7 @@ export const api = {
   // --- ORDERS / CHECKOUT ---
   async createOrder(data: {
     sessionId: string;
+    researchSessionId?: string;
     shippingData: any;
     paymentMethod: string;
   }): Promise<Order> {
@@ -344,7 +345,8 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           shippingData: data.shippingData,
-          paymentMethod: data.paymentMethod
+          paymentMethod: data.paymentMethod,
+          researchSessionId: data.researchSessionId
         })
       });
       if (res.ok) {
@@ -409,7 +411,11 @@ export const api = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ events })
       });
-      return res.ok;
+      if (!res.ok) {
+        const errorJson = await res.json().catch(() => null);
+        throw new Error(errorJson?.error || `Event submission failed with HTTP ${res.status}`);
+      }
+      return true;
     } catch {
       return false;
     }
@@ -417,16 +423,12 @@ export const api = {
 
   // --- TEST SESSIONS & ADMIN ---
   async getSessions(): Promise<TestSession[]> {
-    try {
-      const res = await fetch(`${API_BASE_URL}/admin/sessions`);
-      if (res.ok) {
-        const data = await handleResponse<TestSession[]>(res, []);
-        if (Array.isArray(data)) return data;
-      }
-    } catch {
-      // fallback
+    const res = await fetch(`${API_BASE_URL}/admin/sessions`);
+    const data = await handleResponse<TestSession[]>(res, []);
+    if (!Array.isArray(data)) {
+      throw new Error('Invalid sessions response from server');
     }
-    return [];
+    return data;
   },
 
   async getSession(id: string): Promise<TestSession | null> {

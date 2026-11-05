@@ -3,6 +3,7 @@ import { Cart } from '../types';
 import { api } from '../lib/api';
 import { tracker } from '../lib/tracker';
 import { useToastStore } from './toastStore';
+import { getShoppingSessionId } from '../lib/shoppingScope';
 
 interface CartState {
   cart: Cart;
@@ -34,7 +35,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   fetchCart: async () => {
     set({ isLoading: true, error: null });
     try {
-      const sessionId = tracker.getSessionId();
+      const sessionId = getShoppingSessionId();
       const cart = await api.getCart(sessionId);
       set({ cart, isLoading: false });
     } catch (err: any) {
@@ -45,7 +46,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   addItem: async (productId: number, quantity = 1) => {
     set({ isLoading: true, error: null });
     try {
-      const sessionId = tracker.getSessionId();
+      const sessionId = getShoppingSessionId();
       const updatedCart = await api.addToCart(sessionId, productId, quantity);
       const addedItem = updatedCart.items.find((i) => i.productId === productId);
 
@@ -89,7 +90,7 @@ export const useCartStore = create<CartState>((set, get) => ({
     const oldQty = existingItem?.quantity || 1;
 
     try {
-      const sessionId = tracker.getSessionId();
+      const sessionId = getShoppingSessionId();
       const updatedCart = await api.updateCartItem(sessionId, itemId, quantity);
 
       tracker.track('quantity_change', `cart_item_${itemId}`, {
@@ -111,7 +112,7 @@ export const useCartStore = create<CartState>((set, get) => ({
     const itemToRemove = cart.items.find((i) => i.id === itemId);
 
     try {
-      const sessionId = tracker.getSessionId();
+      const sessionId = getShoppingSessionId();
       const updatedCart = await api.removeCartItem(sessionId, itemId);
 
       tracker.track('cart_remove', `cart_item_${itemId}`, {
@@ -137,7 +138,7 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   applyDiscount: async (code: string) => {
     try {
-      const sessionId = tracker.getSessionId();
+      const sessionId = getShoppingSessionId();
       const updatedCart = await api.applyDiscount(sessionId, code);
 
       tracker.track('discount_apply', 'discount_input', {
@@ -176,7 +177,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   removeDiscount: async () => {
     const code = get().cart.discountCode;
     try {
-      const sessionId = tracker.getSessionId();
+      const sessionId = getShoppingSessionId();
       const updatedCart = await api.removeDiscount(sessionId);
 
       tracker.track('discount_remove', 'discount_button', {
@@ -196,8 +197,15 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 
   clearCart: async () => {
-    const sessionId = tracker.getSessionId();
+    const sessionId = getShoppingSessionId();
     const updatedCart = await api.clearCart(sessionId);
     set({ cart: updatedCart });
   },
 }));
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('shopsim:auth-changed', () => {
+    useCartStore.setState({ cart: initialCart, error: null });
+    void useCartStore.getState().fetchCart();
+  });
+}

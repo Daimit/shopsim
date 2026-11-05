@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 import { useAuthStore } from '../store/authStore';
 import { useCartStore } from '../store/cartStore';
 import { tracker } from '../lib/tracker';
+import { getShoppingSessionId } from '../lib/shoppingScope';
 import {
   Package,
   Truck,
@@ -70,7 +71,7 @@ export const OrdersPage: React.FC = () => {
     document.title = 'ShopSim - My Orders';
     tracker.track('page_view', 'orders_page', { user: user?.email });
 
-    api.getOrders()
+    api.getOrders(getShoppingSessionId())
       .then((data: any) => {
         if (Array.isArray(data)) {
           setOrders(data);
