@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { TestSession } from '../../types';
 import { api } from '../../lib/api';
+import { tracker } from '../../lib/tracker';
 import { useAuthStore } from '../../store/authStore';
 import { AdminShell } from '../../components/admin/AdminShell';
 
@@ -39,7 +40,9 @@ export const DashboardPage: React.FC = () => {
     if (showLoading) setIsLoading(true);
     setError(null);
     try {
-      setSessions(await api.getSessions());
+      await tracker.flush();
+      const latestSessions = await api.getSessions();
+      setSessions(latestSessions);
     } catch {
       setError('We could not load participant sessions. Try again.');
     } finally {
@@ -83,20 +86,35 @@ export const DashboardPage: React.FC = () => {
   const averageDuration = sessions.length
     ? Math.round(sessions.reduce((sum, session) => sum + (session.endedAt ? (new Date(session.endedAt).getTime() - new Date(session.startedAt).getTime()) / 60000 : 0), 0) / sessions.filter((session) => session.endedAt).length || 0)
     : 0;
-  const trend = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date();
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() - (6 - index));
-    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    return {
-      label: date.toLocaleDateString([], { weekday: 'short' }),
-      count: sessions.filter((session) => {
-        const startedAt = new Date(session.startedAt);
-        const startedKey = `${startedAt.getFullYear()}-${String(startedAt.getMonth() + 1).padStart(2, '0')}-${String(startedAt.getDate()).padStart(2, '0')}`;
-        return startedKey === dateKey;
-      }).length,
-    };
-  });
+  const trend = useMemo(() => {
+    const toLocalDayKey = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date();
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() - (6 - index));
+      const dateKey = toLocalDayKey(date);
+
+      const daySessions = sessions.filter((s) => {
+        if (!s.startedAt) return false;
+        const parsed = new Date(s.startedAt);
+        return !isNaN(parsed.getTime()) && toLocalDayKey(parsed) === dateKey;
+      });
+
+      const dayEvents = daySessions.reduce(
+        (sum, s) => sum + ((s as any).eventCount ?? (s as any)._count?.events ?? 0),
+        0
+      );
+
+      return {
+        dateKey,
+        label: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        count: daySessions.length,
+        events: dayEvents,
+      };
+    });
+  }, [sessions]);
   const maxTrend = Math.max(...trend.map((entry) => entry.count), 1);
 
   const exportCsv = () => {
@@ -142,19 +160,46 @@ export const DashboardPage: React.FC = () => {
 
         <div className="grid gap-4 xl:grid-cols-[1.4fr_1fr]">
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between"><div><h2 className="text-sm font-bold text-slate-900">Session activity</h2><p className="mt-1 text-xs text-slate-500">Recorded sessions by day of week</p></div><Activity className="h-4 w-4 text-blue-600" /></div>
-            <div className="mt-6 flex h-36 items-end gap-2">
+            <div className="flex items-start justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">Session activity</h2>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Recorded sessions & interaction events over the last 7 days
+                </p>
+              </div>
+              <Activity className="h-4 w-4 text-blue-600" />
+            </div>
+
+            <div className="mt-6 grid h-40 grid-cols-7 items-end gap-3 pt-4">
               {trend.map((entry) => {
-                const barHeight = entry.count > 0
-                  ? Math.max(20, Math.round((entry.count / maxTrend) * 112))
-                  : 4;
+                const barHeightPx =
+                  entry.count > 0
+                    ? Math.max(24, Math.round((entry.count / maxTrend) * 104))
+                    : 8;
                 return (
-                  <div key={entry.label} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
-                    <span className="text-[10px] font-bold text-slate-500">{entry.count}</span>
-                    <div className="flex h-28 w-full items-end">
-                      <div className="w-full rounded-t-md bg-blue-500 transition-all" style={{ height: `${barHeight}px` }} title={`${entry.count} sessions`} />
+                  <div
+                    key={entry.dateKey}
+                    className="flex h-full flex-col items-center justify-end"
+                  >
+                    <span className="mb-1 text-[11px] font-bold text-slate-700">
+                      {entry.count}
+                    </span>
+                    <span className="mb-1.5 text-[9.5px] font-medium text-blue-600">
+                      {entry.events > 0 ? `${entry.events} ev` : ''}
+                    </span>
+                    <div className="flex h-28 w-full items-end justify-center rounded-lg bg-slate-50 px-1.5">
+                      <div
+                        style={{
+                          height: `${barHeightPx}px`,
+                          backgroundColor: entry.count > 0 ? '#2563eb' : '#cbd5e1',
+                        }}
+                        className="w-full rounded-t-md transition-all duration-300"
+                        title={`${entry.label}: ${entry.count} sessions, ${entry.events} events`}
+                      />
                     </div>
-                    <span className="text-[10px] text-slate-400">{entry.label}</span>
+                    <span className="mt-2 text-[11px] font-medium text-slate-500">
+                      {entry.label}
+                    </span>
                   </div>
                 );
               })}

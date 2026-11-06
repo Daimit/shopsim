@@ -49,6 +49,7 @@ interface SessionState {
   activeTaskNumber: number | null;
   isBannerDismissed: boolean;
   initSession: (participantId?: string, scenarioId?: string) => Promise<void>;
+  completeSession: () => Promise<void>;
   setActiveTask: (taskNumber: number | null) => void;
   dismissBanner: () => void;
   showBanner: () => void;
@@ -61,34 +62,56 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   activeTaskNumber: null,
   isBannerDismissed: false,
 
-  initSession: async (participantId = 'P_' + Math.floor(100 + Math.random() * 900), scenarioId = 'Standard_Usability_Study') => {
-    let stored = sessionStorage.getItem('shopsim_test_session');
-    let session: TestSession;
-
-    if (stored) {
-      try {
-        session = JSON.parse(stored);
-        tracker.setSessionId(session.id);
-      } catch {
-        session = await api.createSession({
-          participantId,
-          scenarioId,
-          userAgent: navigator.userAgent,
-          screenSize: `${window.innerWidth}x${window.innerHeight}`
-        });
+  initSession: async (
+    participantId = 'P_' + Math.floor(100 + Math.random() * 900),
+    scenarioId = 'Standard_Usability_Study'
+  ) => {
+    try {
+      const stored = sessionStorage.getItem('shopsim_test_session');
+      if (stored) {
+        const existingSession: TestSession = JSON.parse(stored);
+        const isGenericAnon =
+          participantId.startsWith('P_') && existingSession.participantId?.startsWith('P_');
+        if (existingSession.participantId === participantId || isGenericAnon) {
+          tracker.setSessionId(existingSession.id);
+          set({ session: existingSession });
+          return;
+        }
       }
-    } else {
-      session = await api.createSession({
+
+      const session = await api.createSession({
         participantId,
         scenarioId,
         userAgent: navigator.userAgent,
-        screenSize: `${window.innerWidth}x${window.innerHeight}`
+        screenSize: `${window.innerWidth}x${window.innerHeight}`,
       });
-      sessionStorage.setItem('shopsim_test_session', JSON.stringify(session));
-      tracker.setSessionId(session.id);
-    }
 
-    set({ session });
+      if (session && session.id) {
+        sessionStorage.setItem('shopsim_test_session', JSON.stringify(session));
+        tracker.setSessionId(session.id);
+        set({ session });
+      }
+    } catch (err) {
+      console.error('Failed to initialize session:', err);
+    }
+  },
+
+  completeSession: async () => {
+    const current = get().session;
+    if (!current?.id) return;
+    try {
+      await tracker.flush();
+      await fetch(`/api/sessions/${current.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: true }),
+      });
+      const updated = { ...current, completed: true, endedAt: new Date().toISOString() };
+      sessionStorage.setItem('shopsim_test_session', JSON.stringify(updated));
+      set({ session: updated });
+    } catch (err) {
+      console.error('Failed to mark session completed:', err);
+    }
   },
 
   setActiveTask: (taskNumber: number | null) => {

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { tracker } from '../../lib/tracker';
 import { useSessionStore } from '../../store/sessionStore';
+import { useAuthStore } from '../../store/authStore';
 
 interface EventContextType {
   sessionId: string;
@@ -13,41 +14,35 @@ export const useEventContext = () => useContext(EventContext);
 
 export const EventProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
-  const initSession = useSessionStore(state => state.initSession);
-  const setActiveTask = useSessionStore(state => state.setActiveTask);
+  const { user } = useAuthStore();
+  const { initSession, setActiveTask, completeSession } = useSessionStore();
   const [sessionReady, setSessionReady] = useState(false);
 
   // Initialize session and tracker
   useEffect(() => {
-    let cancelled = false;
     tracker.init();
-    void initSession().then(() => {
-      if (cancelled) return;
-      setSessionReady(true);
+    const participantLabel = user
+      ? `${user.name || user.email.split('@')[0]} (${user.role})`
+      : undefined;
 
-      const params = new URLSearchParams(location.search);
-      const taskParam = params.get('task');
-      if (taskParam) {
-        const taskNum = parseInt(taskParam, 10);
-        if (!isNaN(taskNum) && taskNum >= 1 && taskNum <= 5) {
-          setActiveTask(taskNum);
-        }
-      }
+    initSession(participantLabel, 'Standard_Usability_Study').then(() => {
+      setSessionReady(true);
+      tracker.track('session_start', 'app_mount', {
+        participant: participantLabel || 'guest',
+      });
     });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  }, [user?.id]);
 
   // Track page_view on route or search change
   useEffect(() => {
     if (!sessionReady) return;
-    const page = location.pathname + location.search;
     tracker.track('page_view', 'route_navigation', {
-      pathname: location.pathname,
+      path: location.pathname,
       search: location.search,
-      title: document.title,
-    }, page);
+    });
+    if (location.pathname.includes('/checkout/success')) {
+      completeSession();
+    }
   }, [location.pathname, location.search, sessionReady]);
 
   // Global click event listener

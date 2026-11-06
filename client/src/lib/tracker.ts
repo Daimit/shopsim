@@ -29,8 +29,18 @@ class EventTracker {
   }
 
   public setSessionId(newId: string): void {
+    const oldId = this.sessionId;
     this.sessionId = newId;
     sessionStorage.setItem('shopsim_session_id', newId);
+
+    // Re-bind any early buffered events from temporary 'sess_...' ID to the real DB session ID
+    if (this.buffer.length > 0 && oldId !== newId) {
+      this.buffer = this.buffer.map((ev) => ({
+        ...ev,
+        sessionId: newId,
+      }));
+      void this.flush();
+    }
   }
 
   private getStoredSequence(): number {
@@ -80,22 +90,43 @@ class EventTracker {
     details?: Record<string, any>,
     page?: string
   ): InteractionEvent {
+    const currentSessionId =
+      sessionStorage.getItem('shopsim_session_id') || this.sessionId;
+    this.sessionId = currentSessionId;
+
     const event: InteractionEvent = {
-      sessionId: this.sessionId,
+      sessionId: currentSessionId,
       timestamp: new Date().toISOString(),
       eventType,
-      target,
-      page: page || window.location.pathname + window.location.search,
-      details,
+      target: target || undefined,
+      page: page || window.location.pathname,
+      details: details || undefined,
       sequenceNum: this.incrementSequence(),
     };
 
     this.buffer.push(event);
-
-    // Save history locally in sessionStorage for admin inspection
     this.saveToLocalHistory(event);
 
-    if (this.buffer.length >= this.maxBufferSize) {
+    // Immediately flush on cart, promo, task, or checkout actions so Admin updates instantly
+    const immediateFlushEvents = [
+      'cart_add',
+      'cart_remove',
+      'quantity_change',
+      'discount_apply',
+      'discount_remove',
+      'checkout_step',
+      'checkout_complete',
+      'task_complete',
+      'task_abandon',
+      'form_error',
+      'checkout_error',
+      'coupon_error',
+    ];
+
+    if (
+      this.buffer.length >= this.maxBufferSize ||
+      immediateFlushEvents.includes(eventType)
+    ) {
       this.flush();
     }
 
