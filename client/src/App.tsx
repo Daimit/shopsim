@@ -24,6 +24,7 @@ import { DashboardPage } from './pages/admin/DashboardPage';
 import { SessionDetailPage } from './pages/admin/SessionDetailPage';
 import { AnalyticsPage } from './pages/admin/AnalyticsPage';
 import { AdminSettingsPage } from './pages/admin/AdminSettingsPage';
+import { AdminCatalogPage } from './pages/admin/AdminCatalogPage';
 import { FeedbackPage } from './pages/FeedbackPage';
 
 export const App: React.FC = () => {
@@ -98,6 +99,14 @@ export const App: React.FC = () => {
                 element={
                   <AdminRouteGuard>
                     <AnalyticsPage />
+                  </AdminRouteGuard>
+                }
+              />
+              <Route
+                path="/admin/catalog"
+                element={
+                  <AdminRouteGuard>
+                    <AdminCatalogPage />
                   </AdminRouteGuard>
                 }
               />

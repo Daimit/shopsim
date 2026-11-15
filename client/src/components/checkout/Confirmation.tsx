@@ -81,14 +81,6 @@ export const Confirmation: React.FC<ConfirmationProps> = ({ order }) => {
           <span>Continue Shopping</span>
         </Link>
 
-        <Link
-          to="/admin"
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-xl transition-colors"
-          data-track="confirmation_view_telemetry"
-        >
-          <span>View Session Telemetry</span>
-          <ArrowRight className="w-4 h-4 text-slate-500" />
-        </Link>
       </div>
     </div>
   );

@@ -481,4 +481,144 @@ router.get('/analytics', async (_req: Request, res: Response, next: NextFunction
   }
 });
 
+router.get('/products', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const products = await prisma.product.findMany({ include: { category: true }, orderBy: { name: 'asc' } });
+    res.json({ success: true, data: products });
+  } catch (error) { next(error); }
+});
+
+const productPayload = (body: Record<string, any>) => ({
+  name: String(body.name || ''),
+  slug: String(body.slug || ''),
+  description: String(body.description || ''),
+  price: Number(body.price || 0),
+  image: String(body.image || ''),
+  images: JSON.stringify(Array.isArray(body.images) ? body.images : []),
+  categoryId: Number(body.categoryId),
+  rating: Number(body.rating ?? 0),
+  reviewCount: Number(body.reviewCount ?? 0),
+  stock: Number(body.stock ?? 0),
+  specs: JSON.stringify(body.specs && typeof body.specs === 'object' ? body.specs : {}),
+  features: JSON.stringify(Array.isArray(body.features) ? body.features : []),
+});
+
+router.post('/products', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const created = await prisma.product.create({ data: productPayload(req.body || {}) });
+    res.status(201).json({ success: true, data: created });
+  } catch (error) { next(error); }
+});
+
+router.put('/products/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const body = req.body || {};
+    const data: Record<string, unknown> = {};
+    for (const key of ['name', 'slug', 'description', 'image']) if (body[key] !== undefined) data[key] = String(body[key]);
+    for (const key of ['price', 'categoryId', 'rating', 'reviewCount', 'stock']) if (body[key] !== undefined) data[key] = Number(body[key]);
+    if (body.images !== undefined) data.images = JSON.stringify(Array.isArray(body.images) ? body.images : []);
+    if (body.specs !== undefined) data.specs = JSON.stringify(body.specs && typeof body.specs === 'object' ? body.specs : {});
+    if (body.features !== undefined) data.features = JSON.stringify(Array.isArray(body.features) ? body.features : []);
+    const updated = await prisma.product.update({ where: { id: Number(req.params.id) }, data });
+    res.json({ success: true, data: updated });
+  } catch (error) { next(error); }
+});
+
+router.delete('/products/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = Number(req.params.id);
+    await prisma.cartItem.deleteMany({ where: { productId: id } });
+    await prisma.product.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (error) { next(error); }
+});
+
+router.get('/categories', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const categories = await prisma.category.findMany({ include: { _count: { select: { products: true } } }, orderBy: { name: 'asc' } });
+    res.json({ success: true, data: categories });
+  } catch (error) { next(error); }
+});
+
+router.post('/categories', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const name = String(req.body?.name || '');
+    const slug = String(req.body?.slug || name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-'));
+    const created = await prisma.category.create({ data: { name, slug } });
+    res.status(201).json({ success: true, data: created });
+  } catch (error) { next(error); }
+});
+
+router.put('/categories/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data: { name?: string; slug?: string } = {};
+    if (req.body?.name !== undefined) data.name = String(req.body.name);
+    if (req.body?.slug !== undefined) data.slug = String(req.body.slug);
+    const updated = await prisma.category.update({ where: { id: Number(req.params.id) }, data });
+    res.json({ success: true, data: updated });
+  } catch (error) { next(error); }
+});
+
+router.delete('/categories/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = Number(req.params.id);
+    const products = await prisma.product.findMany({ where: { categoryId: id }, select: { id: true } });
+    const productIds = products.map((product) => product.id);
+    if (productIds.length) {
+      await prisma.cartItem.deleteMany({ where: { productId: { in: productIds } } });
+      await prisma.product.deleteMany({ where: { categoryId: id } });
+    }
+    await prisma.category.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (error) { next(error); }
+});
+
+router.get('/orders', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const orders = await prisma.order.findMany({ orderBy: { createdAt: 'desc' } });
+    const formatted = orders.map((order) => {
+      const parsed = typeof order.shippingData === 'string'
+        ? (() => { try { return JSON.parse(order.shippingData); } catch { return {}; } })()
+        : {};
+      const payment = parsed._paymentDetails || {};
+      const customerName = [parsed.firstName, parsed.lastName].filter(Boolean).join(' ') || payment.cardholderName || 'Customer';
+      return {
+        id: order.id,
+        orderNumber: `ORD-${String(order.id).padStart(6, '0')}`,
+        sessionId: order.sessionId,
+        researchSessionId: order.researchSessionId,
+        createdAt: order.createdAt,
+        status: order.status,
+        total: order.totalAmount,
+        discount: order.discountAmount,
+        customer: {
+          fullName: customerName,
+          email: parsed.email || '',
+          phone: parsed.phone || '',
+          address: parsed.address1 || '',
+          city: parsed.city || '',
+          state: parsed.state || '',
+          zipCode: parsed.zipCode || '',
+          country: parsed.country || '',
+        },
+        payment: {
+          paymentMethod: payment.paymentMethod || order.paymentMethod,
+          cardType: payment.cardType || 'card',
+          cardLast4: payment.cardLast4 || '',
+          cardholderName: payment.cardholderName || customerName,
+        },
+        items: Array.isArray(parsed.items) ? parsed.items : [],
+      };
+    });
+    res.json({ success: true, data: formatted });
+  } catch (error) { next(error); }
+});
+
+router.delete('/orders/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await prisma.order.delete({ where: { id: Number(req.params.id) } });
+    res.json({ success: true });
+  } catch (error) { next(error); }
+});
+
 export default router;

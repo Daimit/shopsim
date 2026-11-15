@@ -73,6 +73,11 @@ export const CheckoutWizard: React.FC = () => {
         researchSessionId: tracker.getSessionId(),
         shippingData,
         paymentMethod: paymentData.method,
+        paymentDetails: paymentData.method === 'credit_card' ? {
+          cardType: 'card',
+          cardLast4: paymentData.cardNumber?.replace(/\D/g, '').slice(-4),
+          cardholderName: paymentData.cardholderName,
+        } : undefined,
       });
 
       setPlacedOrder(order);

@@ -15,6 +15,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   onBack
 }) => {
   const [method, setMethod] = useState<'credit_card' | 'paypal' | 'bank_transfer'>(initialValues.method || 'credit_card');
+  const [cardType, setCardType] = useState<'debit' | 'credit'>('debit');
   const [cardNumber, setCardNumber] = useState(initialValues.cardNumber || '');
   const [expiryDate, setExpiryDate] = useState(initialValues.expiryDate || '');
   const [cvv, setCvv] = useState(initialValues.cvv || '');
@@ -31,7 +32,7 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
     const cleanCard = cardNumber.replace(/\s+/g, '');
     if (!cleanCard) {
       newErrors.cardNumber = 'Card number is required';
-    } else if (cleanCard.length < 13 || !/^\d+$/.test(cleanCard)) {
+    } else if (cleanCard.length !== 16 || !/^\d+$/.test(cleanCard)) {
       newErrors.cardNumber = 'Enter a valid 16-digit card number';
     }
 
@@ -56,9 +57,19 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
 
     Object.entries(newErrors).forEach(([field, msg]) => {
       tracker.track('form_error', `payment_${field}`, { field, error: msg });
+      tracker.track('checkout_error', `payment_${field}`, { field, error: msg });
     });
 
     return Object.keys(newErrors).length === 0;
+  };
+
+  const autofillTestCard = () => {
+    setCardholderName('TEST CARDHOLDER');
+    setCardNumber('4242 4242 4242 4242');
+    setExpiryDate('12/28');
+    setCvv('424');
+    setErrors({});
+    tracker.track('checkout_step', 'stripe_test_card_autofill', { cardType: 'debit' });
   };
 
   const handleCardFormat = (val: string) => {
@@ -79,6 +90,12 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validateCard()) {
+      tracker.track('checkout_step', 'payment_authorization', {
+        step: 3,
+        stepName: 'payment_authorized',
+        cardType,
+        paymentMethod: method,
+      });
       onSubmit({
         method,
         cardNumber,
@@ -175,6 +192,27 @@ export const PaymentForm: React.FC<PaymentFormProps> = ({
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
             <span>Encrypted 256-bit test transaction</span>
           </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-semibold text-slate-700">Card type:</span>
+            {(['debit', 'credit'] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setCardType(type)}
+                className={`rounded-lg border px-3 py-1.5 text-xs font-bold capitalize ${
+                  cardType === type ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 bg-white text-slate-600'
+                }`}
+              >
+                {type} Card
+              </button>
+            ))}
+            <span className="text-[11px] text-slate-500">Visa Debit, Mastercard, RuPay</span>
+          </div>
+
+          <button type="button" onClick={autofillTestCard} className="w-full rounded-lg border border-dashed border-blue-300 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100">
+            Autofill Test Debit Card (4242)
+          </button>
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">

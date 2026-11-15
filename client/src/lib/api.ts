@@ -338,6 +338,11 @@ export const api = {
     researchSessionId?: string;
     shippingData: any;
     paymentMethod: string;
+    paymentDetails?: {
+      cardType?: string;
+      cardLast4?: string;
+      cardholderName?: string;
+    };
   }): Promise<Order> {
     try {
       const res = await fetch(`${API_BASE_URL}/checkout/${encodeURIComponent(data.sessionId)}`, {
@@ -346,7 +351,8 @@ export const api = {
         body: JSON.stringify({
           shippingData: data.shippingData,
           paymentMethod: data.paymentMethod,
-          researchSessionId: data.researchSessionId
+          researchSessionId: data.researchSessionId,
+          paymentDetails: data.paymentDetails,
         })
       });
       if (res.ok) {

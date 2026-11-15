@@ -3,6 +3,17 @@ import prisma from '../lib/prisma.js';
 
 const router = Router();
 
+const safePaymentDetails = (details: any, paymentMethod: string) => ({
+  paymentMethod,
+  cardType: typeof details?.cardType === 'string' ? details.cardType : undefined,
+  cardLast4: typeof details?.cardLast4 === 'string'
+    ? details.cardLast4.replace(/\D/g, '').slice(-4)
+    : undefined,
+  cardholderName: typeof details?.cardholderName === 'string'
+    ? details.cardholderName.slice(0, 100)
+    : undefined,
+});
+
 const safeJsonParse = (str: string, fallback: any = {}) => {
   try {
     return JSON.parse(str);
@@ -42,10 +53,10 @@ router.get('/orders', async (req: Request, res: Response, next: NextFunction) =>
 });
 
 // POST /api/checkout/:sessionId - Create order
-router.post('/checkout/:sessionId', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/checkout/:sessionId(shopsim_cart_[^/]+)', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { sessionId } = req.params;
-    const { shippingData, paymentMethod = 'credit_card', researchSessionId } = req.body;
+    const { shippingData, paymentMethod = 'credit_card', researchSessionId, paymentDetails } = req.body;
 
     if (!shippingData) {
       res.status(400).json({ success: false, error: 'shippingData is required' });
@@ -101,6 +112,7 @@ router.post('/checkout/:sessionId', async (req: Request, res: Response, next: Ne
     const serializedShipping = JSON.stringify({
       ...parsedShipping,
       items: orderItems,
+      _paymentDetails: safePaymentDetails(paymentDetails, paymentMethod),
     });
 
     // Save order
@@ -180,6 +192,81 @@ router.get('/orders/:orderId', async (req: Request, res: Response, next: NextFun
         items: parsed.items || [],
       },
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/checkout/create-checkout-session', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const {
+      cardType = 'debit',
+      amount = 0,
+      items = [],
+      domainUrl = req.headers.origin || 'http://localhost:5173',
+    } = req.body || {};
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+
+    if (stripeSecretKey && stripeSecretKey.startsWith('sk_')) {
+      const params = new URLSearchParams();
+      params.append('mode', 'payment');
+      params.append('payment_method_types[0]', 'card');
+      params.append('success_url', `${domainUrl}/checkout?step=review&session_id={CHECKOUT_SESSION_ID}`);
+      params.append('cancel_url', `${domainUrl}/checkout?canceled=true`);
+
+      if (Array.isArray(items) && items.length > 0) {
+        items.forEach((item: any, index: number) => {
+          params.append(`line_items[${index}][price_data][currency]`, 'usd');
+          params.append(`line_items[${index}][price_data][product_data][name]`, String(item.name || 'ShopSim Product'));
+          params.append(`line_items[${index}][price_data][unit_amount]`, String(Math.max(50, Math.round(Number(item.price || 1) * 100))));
+          params.append(`line_items[${index}][quantity]`, String(Math.max(1, Number(item.quantity || 1))));
+        });
+      } else {
+        params.append('line_items[0][price_data][currency]', 'usd');
+        params.append(`line_items[0][price_data][product_data][name]`, `ShopSim One-Time ${String(cardType).toUpperCase()} Card Order`);
+        params.append('line_items[0][price_data][unit_amount]', String(Math.max(100, Math.round(Number(amount || 10) * 100))));
+        params.append('line_items[0][quantity]', '1');
+      }
+
+      const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${stripeSecretKey}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString(),
+      });
+      const session: any = await stripeResponse.json();
+      if (stripeResponse.ok && session.id && session.url) {
+        res.json({ success: true, mode: 'stripe_live', sessionId: session.id, url: session.url });
+        return;
+      }
+    }
+
+    const simulatedSessionId = `cs_test_${cardType}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    res.json({
+      success: true,
+      mode: 'stripe_simulator',
+      sessionId: simulatedSessionId,
+      cardType,
+      status: 'complete',
+      payment_status: 'paid',
+      url: `${domainUrl}/checkout?step=review&session_id=${simulatedSessionId}`,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/checkout/checkout-session', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const sessionId = String(req.query.sessionId || '');
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    if (stripeSecretKey && stripeSecretKey.startsWith('sk_') && !sessionId.startsWith('cs_test_')) {
+      const stripeResponse = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`, {
+        headers: { Authorization: `Bearer ${stripeSecretKey}` },
+      });
+      res.json(await stripeResponse.json());
+      return;
+    }
+    res.json({ id: sessionId || `cs_test_${Date.now()}`, object: 'checkout.session', mode: 'payment', payment_method_types: ['card'], payment_status: 'paid', status: 'complete' });
   } catch (error) {
     next(error);
   }
